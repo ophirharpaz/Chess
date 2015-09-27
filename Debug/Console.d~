@@ -1,0 +1,8 @@
+Console.d: ../Console.c ../Console.h ../Chess.h ../Flow.h \
+ ../DataStructures.h
+
+../Console.h:
+
+../Chess.h:
+
+../DataStructures.h:
