@@ -17,8 +17,8 @@
 #define BUTTON_W 182
 #define BUTTON_H 54
 #define ZERO_RECT create_rect(0, 0, 0, 0)
-#define SQUARE_SIZE 63
-#define SPACE 10
+#define SQUARE_SIZE 68
+#define SPACE 8
 
 #define NEW_GAME_CASE 3
 #define LOAD_GAME_CASE 4
@@ -39,6 +39,7 @@
 #define USER_BLACK_CASE 10
 #define CANCEL_S_CASE 11
 #define PLAY_S_CASE 12
+#define CANCEL_BS_CASE 80 // need to think of name
 
 /* Structures and Factories */
 
@@ -96,7 +97,7 @@ int draw_label(label label, int parent_x, int parent_y);
 int draw_image(image image, int parent_x, int parent_y);
 int draw_button(SDL_Surface* mainWindow,button b);
 
-int draw_main_window(window* w);
+int draw_main_window(window * w,PtrConfig c);
 int draw_player_selection_window(window* w);
 int draw_settings_window(window* w);
 int draw_set_board_window(window* w, Config* c);
@@ -104,6 +105,7 @@ int create_menu_panel(panel* menu_panel, SDL_Rect menu_rect,Config * c);
 int create_board_panel(panel* board_panel, SDL_Rect board_rect,Config * c);
 button custom_button(Location loc, char piece, int button_selected, SDL_Rect p_rect);
 int draw_game_window(window* w);
+int remove_piece(window * w,button * new_b,button * b,int index, Location loc,char new_path[23]);
 
 /* On-Click functions */
 int onClick(int event, window *w, Config* c);
@@ -111,7 +113,7 @@ int onClick_main_window(int event, window* w);
 int onClick_player_selection_window(int event, window* w, Config* c);
 int onClick_settings_window(int event, window* w, Config* c);
 int onClick_game_window(int event, window* w);
-int onClick_set_board_window(int event, window* w);
+int onClick_set_board_window(int event, window* w, Config* c);
 int find_panel(SDL_Event mouseMotion,window w);
 int find_button(SDL_Event mouseMotion,panel p,int j);
 
