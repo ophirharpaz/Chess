@@ -10,6 +10,7 @@ int test(PtrConfig c,int num);
 
 int settings_state(PtrConfig c);
 int set_minimax_depth(char* p, PtrConfig c);
+int ok_to_start(Config * c);
 
 //* ----------------------- GAME STATE FUNCTIONS ----------------------- *//
 
@@ -25,6 +26,7 @@ int check(Config* c);
 int legal_move(PtrConfig c, List* poss_moves ,Move move,int print);
 int valid_start_pos(PtrConfig c, Location src);
 int invalid_position(Location loc);
+
 
 //* -------------------- MOVES-GENERATING FUNCTIONS -------------------- *//
 

@@ -20,9 +20,9 @@
 #define SQUARE_SIZE 68
 #define SPACE 8
 
-#define NEW_GAME_CASE 3
-#define LOAD_GAME_CASE 4
-#define QUIT_CASE 5
+#define NEW_GAME_CASE 5
+#define LOAD_GAME_CASE 6
+#define QUIT_CASE 7
 #define PLAYER_VS_PLAYER_CASE 3
 #define PLAYER_VS_PC_CASE 4
 #define WHITE_BEGINS_CASE 5
@@ -101,18 +101,21 @@ int draw_main_window(window * w,PtrConfig c);
 int draw_player_selection_window(window* w);
 int draw_settings_window(window* w);
 int draw_set_board_window(window* w, Config* c);
-int create_menu_panel(panel* menu_panel, SDL_Rect menu_rect,Config * c);
+int draw_set_board_menu(panel* menu_panel, SDL_Rect menu_rect,Config * c);
 int create_board_panel(panel* board_panel, SDL_Rect board_rect,Config * c);
 button custom_button(Location loc, char piece, int button_selected, SDL_Rect p_rect);
-int draw_game_window(window* w);
+int draw_game_window(window* w, Config* c);
 int remove_piece(window * w,button * new_b,button * b,int index, Location loc,char new_path[23]);
+int draw_slots_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c);
+int draw_empty_panel(panel* toBeFilled, SDL_Rect slots_rect, Config* c);
 
 /* On-Click functions */
 int onClick(int event, window *w, Config* c);
-int onClick_main_window(int event, window* w);
+int onClick_main_window(int event, window* w, Config* c);
 int onClick_player_selection_window(int event, window* w, Config* c);
 int onClick_settings_window(int event, window* w, Config* c);
-int onClick_game_window(int event, window* w);
+int onClick_game_window(int event, window* w, Config* c);
+int draw_game_menu(panel* menu_panel, SDL_Rect menu_rect, Config* c);
 int onClick_set_board_window(int event, window* w, Config* c);
 int find_panel(SDL_Event mouseMotion,window w);
 int find_button(SDL_Event mouseMotion,panel p,int j);

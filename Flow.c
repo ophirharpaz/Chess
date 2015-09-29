@@ -159,7 +159,7 @@ int settings_state(PtrConfig c) {
 			c->END_GAME = 1;
 			break;
 		} else if (strcmp(input, "start\n") == 0) {
-			if ((count_pieces(c,'k')==1) && (count_pieces(c,'K')==1)){
+			if (ok_to_start(c)){//need to add no pawns in final rows
 				break;
 			}
 			print_message(WRONG_BOARD_INITIALIZATION);
@@ -789,10 +789,21 @@ Location piece_location(Config* c, char piece) { //need to define default locati
 	for (i = 0; i < BOARD_SIZE; i++) {
 		for (j = 0; j < BOARD_SIZE; j++) {
 			if (BOARD(i,j)== piece) {
-				res = create_loc(i, j);
+				return res;
 			}
 		}
 	}
 	return res;
 }
 
+int ok_to_start(Config * c){
+	if (!(count_pieces(c,'k')==1) && (count_pieces(c,'K')==1)){
+		return 0;
+	}int j;
+	for (j=0;j<BOARD_SIZE;j++){
+		if (BOARD(BOARD_SIZE-1,j)=='m'||BOARD(0,j)=='M'){
+			return 0;
+		}
+	}
+	return 1;
+}
