@@ -44,7 +44,7 @@ int load_file(char* path, PtrConfig c) {
 	}
 	buffer[i - 1] = '\0';
 	char * line3 = next_line(next_line(buffer));
-	c->TURN = (compare_line_field(line3, "white") == 0) ? WHITE : BLACK;
+	c->TURN = (compare_line_field(line3, "White") == 0) ? WHITE : BLACK;
 	char *line4 = next_line(line3);
 	c->MODE = (compare_line_field(line4, "1") == 0) ? 1 : 2;
 	char *line5 = next_line(line4);
@@ -59,7 +59,7 @@ int load_file(char* path, PtrConfig c) {
 			c->DEPTH = atoi(depth);
 		}
 		c->USER_COLOR =
-				(compare_line_field(line6, "white") == 0) ? WHITE : BLACK;
+				(compare_line_field(line6, "White") == 0) ? WHITE : BLACK;
 	} else {
 		c->DIFFICULTY = 0;
 		c->DEPTH = 1;
@@ -132,7 +132,7 @@ int save_file(char* path, PtrConfig c) {
 		return 0;
 	}
 
-	if (!write_line(fp, "next_turn", c->TURN == WHITE ? "white" : "black", 1)) {
+	if (!write_line(fp, "next_turn", c->TURN == WHITE ? "White" : "Black", 1)) {
 		return 0;
 	}
 
@@ -143,16 +143,16 @@ int save_file(char* path, PtrConfig c) {
 		return 0;
 	if (c->MODE == 2) {
 		res[0] = c->DEPTH + '0';
-		if (!write_line(fp, "difficulty", c->DIFFICULTY == 1 ? res : "best",
+		if (!write_line(fp, "difficulty", c->DIFFICULTY == 1 ? "best" : res,
 				1)) {
 			return 0;
 		}
 		if (!write_line(fp, "user_color",
-				c->USER_COLOR == WHITE ? "white" : "black", 1)) {
+				c->USER_COLOR == WHITE ? "White" : "Black", 1)) {
 			return 0;
 		}
 
-	} else { // PROBLEM! PLAYER VS. PLAYER IS NOT SAVED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	} else {
 		if (!write_line(fp, "difficulty", "e", 1)) {
 			return 0;
 		}

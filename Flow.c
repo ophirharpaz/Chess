@@ -1,15 +1,13 @@
 # include "Flow.h"
-# include "FileWriter.h"
-# include "gui.h"
-# include "Minimax.h"
 
 int main(int argc, char* argv[]) {
 	Config c = init_config();
-	main2(c);
-//	test(&c,8);
-//	print_board(&c);
-//	settings_state(&c);
-//	game_state(&c);
+	if (argc == 2 && (strcmp(argv[1], "gui") == 0)) {
+		main_gui(c);
+	} else if ((argc == 2 && (strcmp(argv[1], "console") == 0)) || argc == 1) {
+		settings_state(&c);
+		game_state(&c);
+	}
 	return 0;
 }
 
@@ -192,7 +190,7 @@ int set_minimax_depth(char* p, Config* config) {
 
 int game_state(PtrConfig c) {
 	while (!c->END_GAME) {
-		List* moves = init_list(1);
+		List* moves = init_list(0);
 		if (moves == NULL) { // malloc failure...
 			return 0;
 		}
@@ -231,7 +229,7 @@ int game_state(PtrConfig c) {
 //* Checks whether one of the c->TURN's king is threatened by opponent *//
 
 int check(Config* c) {
-	Location king_location = piece_location(c, c->TURN == 1 ? 'k' : 'K');
+	Location king_location = piece_location(c, c->TURN == WHITE ? 'k' : 'K');
 	List* moves = init_list(0);
 	if (moves==NULL){
 		return 2;
@@ -305,6 +303,7 @@ int user_turn(Config* c,List * moves) {
 		if (fgets(input, 50, stdin) == NULL) {
 			perror_message("fgets");
 			c->END_GAME = 1;
+			free_list(moves);
 			return 0;
 		}
 		if (strncmp(input, "move", 4) == 0) {
@@ -358,7 +357,7 @@ int user_turn(Config* c,List * moves) {
 
 // Performs computer's best move calculated by "Minimax".
 int computer_turn(Config* c,List *moves) {
-	if (!alphabeta(*c, moves)) {//malloc error
+	if (!alphabeta(*c, moves)) { // malloc error
 		c->END_GAME = 1;
 		return 0;
 	}
@@ -510,7 +509,7 @@ int generate_man_moves(Config* c, List* moves, Location loc,int create_boards) {
 	char piece = BOARD(loc.row, loc.col);
 	int sign = islower(piece) ? 1 : -1;
 	int promote = ((islower(piece) && loc.row + sign == 7)
-			|| (islower(piece) && loc.row + sign == 0));
+			|| (isupper(piece) && loc.row + sign == 0));
 	Location diag_right = { loc.row + sign, loc.col + 1 };
 	Location diag_left = { loc.row + sign, loc.col - 1 };
 	Location one_step = { loc.row + sign, loc.col };
@@ -785,11 +784,11 @@ int count_pieces(PtrConfig c, char type) {
 
 Location piece_location(Config* c, char piece) { //need to define default location;
 	int i, j;
-	Location res;
+	Location res=create_loc(-1,-1);
 	for (i = 0; i < BOARD_SIZE; i++) {
 		for (j = 0; j < BOARD_SIZE; j++) {
 			if (BOARD(i,j)== piece) {
-				return res;
+				res=create_loc(i,j);
 			}
 		}
 	}

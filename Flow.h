@@ -1,6 +1,9 @@
 #ifndef FLOW_H_
 #define FLOW_H_
 
+# include "Minimax.h"
+# include "FileWriter.h"
+# include "Gui.h"
 # include "DataStructures.h"
 
 int chess_main(int argc, char* argv[]);

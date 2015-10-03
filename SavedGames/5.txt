@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <game>
-	<next_turn>white</next_turn>
-	<game_mode>1</game_mode>
-	<difficulty></difficulty>
-	<user_color></user_color>
+	<next_turn>Black</next_turn>
+	<game_mode>2</game_mode>
+	<difficulty>best</difficulty>
+	<user_color>Black</user_color>
 	<board>
 		<row_8>RNBQKBNR</row_8>
 		<row_7>MMMMMMMM</row_7>
 		<row_6>________</row_6>
-		<row_5>____m___</row_5>
+		<row_5>________</row_5>
 		<row_4>________</row_4>
 		<row_3>________</row_3>
-		<row_2>mmmmmmm_</row_2>
+		<row_2>mmmmmmmm</row_2>
 		<row_1>rnbqkbnr</row_1>
 	</board>
 	<general>

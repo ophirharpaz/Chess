@@ -9,7 +9,7 @@
 #define DATASTRUCTURES_H_
 
 # include "Chess.h"
-
+# include <time.h>
 
 typedef struct Locations {
    int row;

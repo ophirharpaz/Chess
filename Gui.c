@@ -1,8 +1,7 @@
-# include "gui.h"
-# include "FileWriter.h"
+# include "Gui.h"
 
-/* GUI Flow */
-int main2(Config c) {
+/** GUI Flow **/
+int main_gui(Config c) {
 	SDL_Event event;
 
 	/* Initialize the SDL library (starts the event loop) */
@@ -17,13 +16,42 @@ int main2(Config c) {
 	draw_main_window(&w, &c);
 	SDL_Event mouseMotion;
 	while (SDL_WaitEvent(&event) >= 0) {
+		if(w.id=='g'&&c.MODE==ONE_PLAYER && c.TURN!=c.USER_COLOR && c.END_GAME==0){
+			List * PC_moves=init_list(0);
+			if (PC_moves==NULL){
+				exit(0);
+				return 0;
+			}
+			if (!generate_legal_moves(&c, PC_moves)) { // malloc failure...
+				free_list(PC_moves);
+				exit(0);
+				return 0;
+			}
+			if (!alphabeta(c, PC_moves)) { // malloc error
+				c.END_GAME = 1;
+				exit(0);
+				return 0;
+			}
+			print_list(PC_moves);
+			Move comp_move = best_move(PC_moves);
+			printf("Computer move: "); print_move(comp_move);
+			int src_index, dst_index;
+			src_index = loc_to_index(comp_move.src);
+			dst_index = loc_to_index(comp_move.dst);
+			button comp_b = w.children[0].children[src_index];
+			make_move(&c, PC_moves, comp_move);
+			draw_move_made(&w, &c, src_index, dst_index, comp_move.src, comp_move.dst, &comp_b, BOARD_RECT);
+			c.TURN = 1 - c.TURN;
+			draw_curr_state(&w, &c);
+			free_list(PC_moves);
+		}
 		switch (event.type) {
 		case SDL_ACTIVEEVENT: {
 			if (event.active.state & SDL_APPACTIVE) {
 				if (event.active.gain) {
-					printf("App activated\n");
+//					printf("App activated\n");
 				} else {
-					printf("App iconified\n");
+//					printf("App iconified\n");
 				}
 			}
 		}
@@ -90,6 +118,18 @@ int create_button(button* b, SDL_Rect parent_rect, int x_pos, int y_pos,
 	return 1;
 }
 
+int edit_button(button* b, char* pathToImage) {
+	b->image = create_image(pathToImage);
+	SDL_FreeSurface(b->button_window);
+	b->button_window = IMG_Load(b->image.pathToImage);
+	if (b->button_window == NULL) {
+		fprintf(stderr, "Couldn't set 800x600x8 video mode: %s\n",
+				SDL_GetError());
+		return 0;
+	}
+	return 1;
+}
+
 image create_image(char pathToImage[100]) {
 	image image;
 	strcpy(image.pathToImage, pathToImage);
@@ -137,20 +177,7 @@ int create_window(window* w, int children_len, char header[20],
 	return 1;
 }
 
-int edit_button(button* b, char* pathToImage) {
-	b->image = create_image(pathToImage);
-	SDL_FreeSurface(b->button_window);
-	b->button_window = IMG_Load(b->image.pathToImage);
-	if (b->button_window == NULL) {
-		fprintf(stderr, "Couldn't set 800x600x8 video mode: %s\n",
-				SDL_GetError());
-		return 0;
-	}
-	return 1;
-}
-
-/** Drawing functions **/
-/** Expects: window object. Draws the main window of the program **/
+/** widget-drawing functions **/
 int draw_window(window w) {
 
 	SDL_WM_SetCaption(w.header, 0); // NULL can be some icon in the future
@@ -191,6 +218,7 @@ int draw_button(SDL_Surface* mainWindow, button b) {
 	return 1;
 }
 
+/** Program's windows drawing functions **/
 int draw_main_window(window * w, PtrConfig c) {
 	//initalize c
 	c->DEPTH = 1;
@@ -198,10 +226,10 @@ int draw_main_window(window * w, PtrConfig c) {
 	c->MODE = 1;
 	c->TURN = 1;
 	c->USER_COLOR = 1;
-	c->CASTLE=1;
-	c->END_GAME=0;
+	c->CASTLE = 1;
+	c->END_GAME = 0;
 	init_board(c);
-	print_config(c);
+//	print_config(c);
 	//initialize variables
 	button panel_children[MAX_BUTTONS];
 	button panel_children_title[MAX_BUTTONS];
@@ -233,7 +261,8 @@ int draw_main_window(window * w, PtrConfig c) {
 	panel_children[0] = newGame;
 	panel_children[1] = loadGame;
 
-	create_button(&quit,create_rect(600,500,182,54), 0, 0, BUTTON_W, BUTTON_H, quitImage);
+	create_button(&quit, create_rect(600, 500, 182, 54), 0, 0, BUTTON_W,
+			BUTTON_H, quitImage);
 
 	panel_children_quit[0] = quit;
 
@@ -256,7 +285,7 @@ int draw_main_window(window * w, PtrConfig c) {
 	return draw_window(*w);
 }
 
-int draw_player_selection_window(window *w) {
+int draw_player_selection_window(window *w, Config* c) {
 	free_window(*w);
 	// initialize variables
 	button panel_children[MAX_BUTTONS];
@@ -278,11 +307,22 @@ int draw_player_selection_window(window *w) {
 	image panel_image = create_image("graphics/transparent.png");
 	image bg_image = create_image("graphics/bg.bmp");
 	image header_image = create_image("graphics/PlayerSelection.png");
-	image playerVsPlayerImage = create_image(
-			"graphics/PlayerVsPlayerPressed.png");
-	image playerVsPCImage = create_image("graphics/PlayerVsPC.png");
-	image whiteImage = create_image("graphics/WhiteBeginsPressed.png");
-	image blackImage = create_image("graphics/BlackBegins.png");
+	image playerVsPlayerImage =
+			(c->MODE == TWO_PLAYERS) ?
+					create_image("graphics/PlayerVsPlayerPressed.png") :
+					create_image("graphics/PlayerVsPlayer.png");
+	image playerVsPCImage =
+			(c->MODE == ONE_PLAYER) ?
+					create_image("graphics/PlayerVsPCPressed.png") :
+					create_image("graphics/PlayerVsPC.png");
+	image whiteBeginsImage =
+			(c->TURN == WHITE) ?
+					create_image("graphics/WhiteBeginsPressed.png") :
+					create_image("graphics/WhiteBegins.png");
+	image blackBeginsImage =
+			(c->TURN == BLACK) ?
+					create_image("graphics/BlackBeginsPressed.png") :
+					create_image("graphics/BlackBegins.png");
 	image setBoardImage = create_image("graphics/SetTheBoard.png");
 	image cancelImage = create_image("graphics/Cancel.png");
 	image nextImage = create_image("graphics/Next.png");
@@ -291,8 +331,10 @@ int draw_player_selection_window(window *w) {
 			playerVsPlayerImage);
 	create_button(&playerVsPC, p_rect, 250, 150, BUTTON_W, BUTTON_H,
 			playerVsPCImage);
-	create_button(&white, p_rect, 30, 225, BUTTON_W, BUTTON_H, whiteImage);
-	create_button(&black, p_rect, 250, 225, BUTTON_W, BUTTON_H, blackImage);
+	create_button(&white, p_rect, 30, 225, BUTTON_W, BUTTON_H,
+			whiteBeginsImage);
+	create_button(&black, p_rect, 250, 225, BUTTON_W, BUTTON_H,
+			blackBeginsImage);
 	create_button(&set_board, p_rect, 30, 300, BUTTON_W, BUTTON_H,
 			setBoardImage);
 	create_button(&cancel, p_rect, 30, 450, BUTTON_W, BUTTON_H, cancelImage);
@@ -314,7 +356,7 @@ int draw_player_selection_window(window *w) {
 	return draw_window(*w);
 }
 
-int draw_settings_window(window* w) {
+int draw_settings_window(window* w, Config* c) {
 	free_window(*w);
 
 	// initialize variables
@@ -341,13 +383,37 @@ int draw_settings_window(window* w) {
 	image bg_image = create_image("graphics/bg.bmp");
 	image header_image = create_image("graphics/Settings.png");
 	image difficultyImage = create_image("graphics/Difficulty.png");
-	image diff1Image = create_image("graphics/1Pressed.png");
-	image diff2Image = create_image("graphics/2.png");
-	image diff3Image = create_image("graphics/3.png");
-	image diff4Image = create_image("graphics/4.png");
-	image diffBestImage = create_image("graphics/Best.png");
-	image IPlayWhiteImage = create_image("graphics/IPlayWhitePressed.png");
-	image IPlayBlackImage = create_image("graphics/IPlayBlack.png");
+
+	image diff1Image =
+			(c->DEPTH == 1) ?
+					create_image("graphics/1Pressed.png") :
+					create_image("graphics/1.png");
+	image diff2Image =
+			(c->DEPTH == 2) ?
+					create_image("graphics/2Pressed.png") :
+					create_image("graphics/2.png");
+	image diff3Image =
+			(c->DEPTH == 3) ?
+					create_image("graphics/3Pressed.png") :
+					create_image("graphics/3.png");
+	image diff4Image =
+			(c->DEPTH == 4 && c->DIFFICULTY == 0) ?
+					create_image("graphics/4Pressed.png") :
+					create_image("graphics/4.png");
+	image diffBestImage =
+			(c->DIFFICULTY) ?
+					create_image("graphics/BestPressed.png") :
+					create_image("graphics/Best.png");
+
+	image IPlayWhiteImage =
+			(c->USER_COLOR == WHITE) ?
+					create_image("graphics/IPlayWhitePressed.png") :
+					create_image("graphics/IPlayWhite.png");
+	image IPlayBlackImage =
+			(c->USER_COLOR == BLACK) ?
+					create_image("graphics/IPlayBlackPressed.png") :
+					create_image("graphics/IPlayBlack.png");
+
 	image cancelImage = create_image("graphics/Cancel.png");
 	image nextImage = create_image("graphics/Next.png");
 
@@ -402,15 +468,64 @@ int draw_set_board_window(window* w, Config* c) {
 	image bg_image = create_image("graphics/transparent.png");
 
 	// create rects;
-	SDL_Rect board_rect = create_rect(0, 0, 600, 600);
+	SDL_Rect board_rect = BOARD_RECT;
 	SDL_Rect menu_rect = create_rect(600, 0, 200, 600);
 
 	create_board_panel(&board_panel, board_rect, c);
-	draw_set_board_menu(&menu, menu_rect, c);
+	create_set_board_menu(&menu, menu_rect, c);
 	window_children[0] = board_panel;
 	window_children[1] = menu;
 	create_window(w, 2, "Chess", window_children, bg_image, 'b');
 	return draw_window(*w);
+}
+
+int create_set_board_menu(panel* menu_panel, SDL_Rect menu_rect, Config * c) {
+	button menu_children[MAX_BUTTONS];
+	char pieces[6] = { 'm', 'n', 'b', 'r', 'q', 'k' };
+	char button_path[23];
+	strcpy(button_path, "graphics/pieces/ u.png");
+	int i;
+	for (i = 0; i < 6; i++) {
+		button_path[16] = pieces[i];
+		image button_image = create_image(button_path);
+		button b1;
+		create_button(&b1, menu_rect, 20, SPACE + (SQUARE_SIZE + SPACE - 4) * i,
+		SQUARE_SIZE,
+		SQUARE_SIZE, button_image);
+		menu_children[2 * i] = b1;
+		button_path[16] = toupper(pieces[i]);
+		button_image = create_image(button_path);
+		button b2;
+		create_button(&b2, menu_rect, 120,
+		SPACE + (SQUARE_SIZE + SPACE - 4) * i, SQUARE_SIZE,
+		SQUARE_SIZE, button_image);
+		menu_children[2 * i + 1] = b2;
+	}
+
+	image bin_image = create_image("graphics/pieces/tu.png");
+	image cancel_image = create_image("graphics/SmallCancel.png");
+	image cont_image =
+			(c->MODE == ONE_PLAYER) ?
+					create_image("graphics/SmallNext.png") :
+					create_image("graphics/Play.png");
+
+	button bin, cancel, cont;
+	create_button(&bin, menu_rect, 72, SPACE + (SQUARE_SIZE + SPACE - 4) * 6,
+	SQUARE_SIZE, SQUARE_SIZE, bin_image);
+	create_button(&cancel, menu_rect, 8, SPACE + (SQUARE_SIZE + SPACE - 4) * 7,
+			92, BUTTON_H, cancel_image);
+	create_button(&cont, menu_rect, 103, SPACE + (SQUARE_SIZE + SPACE - 4) * 7,
+			92, BUTTON_H, cont_image);
+
+	menu_children[12] = bin;
+	menu_children[13] = cancel;
+	menu_children[14] = cont;
+
+	image bg_image = create_image("graphics/whitebgPanel.bmp");
+	create_panel(ZERO_RECT, menu_panel, 15, 600, 0, 200, 600, bg_image,
+			menu_children);
+
+	return 1;
 }
 
 int create_board_panel(panel* board_panel, SDL_Rect board_rect, Config * c) {
@@ -431,70 +546,6 @@ int create_board_panel(panel* board_panel, SDL_Rect board_rect, Config * c) {
 	return 1;
 }
 
-int draw_set_board_menu(panel* menu_panel, SDL_Rect menu_rect, Config * c) {
-	button menu_children[MAX_BUTTONS];
-	char pieces[6] = { 'm', 'n', 'b', 'r', 'q', 'k' };
-	char button_path[23];
-	strcpy(button_path, "graphics/pieces/ u.png");
-	int i;
-	for (i = 0; i < 6; i++) {
-		button_path[16] = pieces[i];
-		image button_image = create_image(button_path);
-		button b1;
-		create_button(&b1, menu_rect, 20, SPACE + (SQUARE_SIZE + SPACE - 4) * i,
-				SQUARE_SIZE,
-				SQUARE_SIZE, button_image);
-		menu_children[2 * i] = b1;
-		button_path[16] = toupper(pieces[i]);
-		button_image = create_image(button_path);
-		button b2;
-		create_button(&b2, menu_rect, 120,
-				SPACE + (SQUARE_SIZE + SPACE - 4) * i, SQUARE_SIZE,
-				SQUARE_SIZE, button_image);
-		menu_children[2 * i + 1] = b2;
-	}
-
-	image bin_image = create_image("graphics/pieces/tu.png");
-	image cancel_image = create_image("graphics/SmallCancel.png");
-	image cont_image =
-			(c->MODE == ONE_PLAYER) ?
-					create_image("graphics/SmallNext.png") :
-					create_image("graphics/Play.png");
-
-	button bin, cancel, cont;
-	create_button(&bin, menu_rect, 72, SPACE + (SQUARE_SIZE + SPACE - 4) * 6,
-			SQUARE_SIZE, SQUARE_SIZE, bin_image);
-	create_button(&cancel, menu_rect, 8, SPACE + (SQUARE_SIZE + SPACE - 4) * 7,
-			92, BUTTON_H, cancel_image);
-	create_button(&cont, menu_rect, 103, SPACE + (SQUARE_SIZE + SPACE - 4) * 7,
-			92, BUTTON_H, cont_image);
-
-	menu_children[12] = bin;
-	menu_children[13] = cancel;
-	menu_children[14] = cont;
-
-	image bg_image = create_image("graphics/whitebgPanel.bmp");
-	create_panel(ZERO_RECT, menu_panel, 15, 600, 0, 200, 600, bg_image,
-			menu_children);
-
-	return 1;
-}
-
-button custom_button(Location loc, char piece, int button_selected,
-		SDL_Rect p_rect) {
-	char button_path[23];
-	strcpy(button_path, "graphics/pieces/");
-	button_path[16] = (piece == EMPTY) ? 'e' : piece;
-	button_path[17] = (button_selected) ? 's' : 'u';
-	strcpy(&(button_path[18]), ".png");
-	button b;
-	image button_image = create_image(button_path);
-	create_button(&b, p_rect, 28 + loc.col * SQUARE_SIZE,
-			28 + (7 - loc.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
-			button_image);
-	return b;
-}
-
 int draw_game_window(window* w, Config* c) {
 	free_window(*w);
 
@@ -508,22 +559,21 @@ int draw_game_window(window* w, Config* c) {
 	image bg_image = create_image("graphics/transparent.png");
 
 	// create rects;
-	SDL_Rect board_rect = create_rect(0, 0, 600, 600);
+	SDL_Rect board_rect = BOARD_RECT;
 	SDL_Rect menu_rect = create_rect(600, 0, 200, 600);
 
 	create_board_panel(&board_panel, board_rect, c);
-	draw_game_menu(&menu, menu_rect, c);
-	draw_empty_panel(&toBeFilled,ZERO_RECT,c);
-
+	create_game_menu(&menu, menu_rect, c);
+	draw_empty_panel(&toBeFilled, ZERO_RECT, c);
 	window_children[0] = board_panel;
 	window_children[1] = menu;
 	window_children[2] = toBeFilled;
 	create_window(w, 3, "Chess", window_children, bg_image, 'g');
-	return draw_window(*w);
-
+	draw_window(*w);
+	return draw_curr_state(w, c);
 }
 
-int draw_game_menu(panel* menu_panel, SDL_Rect menu_rect, Config* c) {
+int create_game_menu(panel* menu_panel, SDL_Rect menu_rect, Config* c) {
 	button menu_children[MAX_BUTTONS];
 
 	// initialize buttons
@@ -539,22 +589,35 @@ int draw_game_menu(panel* menu_panel, SDL_Rect menu_rect, Config* c) {
 	image mainMenu_image = create_image("graphics/MainMenu.png");
 	image quit_image = create_image("graphics/Quit.png");
 
-	create_button(&getMove, menu_rect, 8, 13, BUTTON_W, BUTTON_H, getMove_image);
-	create_button(&saveGame, menu_rect, 8, 17 + BUTTON_H + SPACE, BUTTON_W, BUTTON_H, saveGame_image);
-	create_button(&mainMenu, menu_rect, 8, 470, BUTTON_W, BUTTON_H, mainMenu_image);
-	create_button(&quit, menu_rect, 8, 470 + BUTTON_H + SPACE, BUTTON_W, BUTTON_H, quit_image);
+	create_button(&getMove, menu_rect, 8, 13, BUTTON_W, BUTTON_H,
+			getMove_image);
+	create_button(&saveGame, menu_rect, 8, 17 + BUTTON_H + SPACE, BUTTON_W,
+			BUTTON_H, saveGame_image);
+	create_button(&mainMenu, menu_rect, 8, 470, BUTTON_W, BUTTON_H,
+			mainMenu_image);
+	create_button(&quit, menu_rect, 8, 470 + BUTTON_H + SPACE, BUTTON_W,
+			BUTTON_H, quit_image);
 
 	menu_children[0] = getMove;
 	menu_children[1] = saveGame;
 	menu_children[2] = mainMenu;
 	menu_children[3] = quit;
 
-	create_panel(ZERO_RECT, menu_panel, 4, 600, 0, 200, 600, bg_image, menu_children);
+	create_panel(ZERO_RECT, menu_panel, 4, 600, 0, 200, 600, bg_image,
+			menu_children);
 
 	return 1;
 }
 
-int draw_slots_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
+int draw_empty_panel(panel* toBeFilled, SDL_Rect slots_rect, Config* c) {
+	button toBeFilled_children[MAX_BUTTONS];
+	image bg_image = create_image("graphics/transparent.png");
+	create_panel(ZERO_RECT, toBeFilled, 0, 0, 0, 0, 0, bg_image,
+			toBeFilled_children);
+	return 1;
+}
+
+int create_slots_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 	button slots_children[MAX_BUTTONS];
 
 	// initialize buttons
@@ -562,28 +625,24 @@ int draw_slots_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 	char path[19] = "graphics/diskx.png";
 	for (i = 0; i < 6; i++) {
 		button b;
-		path[13] = '0'+(i+1);
+		path[13] = '0' + (i + 1);
 		image button_image = create_image(path);
-		create_button(&b, slots_rect, 32+(54+3*SPACE)*(i%2), ((i-(i%2))/2)*(54+SPACE) + SPACE, 54, 54, button_image);
+		create_button(&b, slots_rect, 32 + (54 + 3 * SPACE) * (i % 2),
+				((i - (i % 2)) / 2) * (54 + SPACE) + SPACE, 54, 54,
+				button_image);
 		slots_children[i] = b;
 	}
 	button b;
-	path[13] = '0'+(7);
+	path[13] = '0' + (7);
 	image button_image = create_image(path);
-	create_button(&b, slots_rect, 73, 3*(54 + SPACE) + SPACE, 54, 54, button_image);
+	create_button(&b, slots_rect, 73, 3 * (54 + SPACE) + SPACE, 54, 54,
+			button_image);
 	slots_children[6] = b;
 
 	image SlotsPanelBG = create_image("graphics/transparent.png");
 
-	create_panel(ZERO_RECT, slots_panel, 7, slots_rect.x, slots_rect.y, slots_rect.w, slots_rect.h, SlotsPanelBG, slots_children);
-
-	return 1;
-}
-
-int draw_empty_panel(panel* toBeFilled, SDL_Rect slots_rect, Config* c){
-	button toBeFilled_children[MAX_BUTTONS];
-	image bg_image = create_image("graphics/transparent.png");
-	create_panel(ZERO_RECT, toBeFilled, 0, 0, 0, 0, 0, bg_image, toBeFilled_children);
+	create_panel(ZERO_RECT, slots_panel, 7, slots_rect.x, slots_rect.y,
+			slots_rect.w, slots_rect.h, SlotsPanelBG, slots_children);
 	return 1;
 }
 
@@ -594,15 +653,18 @@ int draw_depths_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 	char path[20] = "graphics/depthx.png";
 	for (i = 0; i < 4; i++) {
 		button b;
-		path[14] ='0'+(i+1);
+		path[14] = '0' + (i + 1);
 		image button_image = create_image(path);
-		create_button(&b, slots_rect, 32+(54+3*SPACE)*(i%2), ((i-(i%2))/2)*(54+SPACE) + 9*SPACE, 54, 54, button_image);
+		create_button(&b, slots_rect, 32 + (54 + 3 * SPACE) * (i % 2),
+				((i - (i % 2)) / 2) * (54 + SPACE) + 9 * SPACE, 54, 54,
+				button_image);
 		depths_children[i] = b;
 	}
 	button b;
-	path[14] ='b';
+	path[14] = 'b';
 	image button_image = create_image(path);
-	create_button(&b, slots_rect, 73, 2*(54 + SPACE) + 9*SPACE, 54, 54, button_image);
+	create_button(&b, slots_rect, 73, 2 * (54 + SPACE) + 9 * SPACE, 54, 54,
+			button_image);
 	depths_children[4] = b;
 
 	image depth_image = create_image("graphics/Depth.png");
@@ -612,23 +674,133 @@ int draw_depths_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 
 	image DepthsPanelBG = create_image("graphics/transparent.png");
 
-	create_panel(ZERO_RECT, slots_panel, 6, 600, 137, 198, 310, DepthsPanelBG, depths_children);
+	create_panel(ZERO_RECT, slots_panel, 6, 600, 137, 198, 310, DepthsPanelBG,
+			depths_children);
 	return 1;
 }
 
+int draw_promote_panel(panel* promote_panel, SDL_Rect slots_rect, Config* c) {
+	button promote_children[MAX_BUTTONS];
+	// initialize buttons
+	char pieces[4] = { 'q', 'n', 'b', 'r' };
+	char path[23] = "graphics/pieces/xu.png";
+	int i;
+	for (i = 0; i < 4; i++) {
+		button b;
+		path[16] = (c->TURN == BLACK) ? toupper(pieces[i]) : pieces[i];
+		image button_image = create_image(path);
+		create_button(&b, slots_rect, 20 + (SQUARE_SIZE + 3 * SPACE) * (i % 2),
+				((i - (i % 2)) / 2) * (SQUARE_SIZE + SPACE) + 9 * SPACE,
+				SQUARE_SIZE, SQUARE_SIZE, button_image);
+		promote_children[i] = b;
+	}
+	image DepthsPanelBG = create_image("graphics/transparent.png");
+	create_panel(ZERO_RECT, promote_panel, 4, 600, 137, 198, 310, DepthsPanelBG,
+			promote_children);
+	return 1;
+}
+
+int draw_state(window* w, Config *c, int state, SDL_Rect rect) {
+	panel p;
+	button p_children[MAX_BUTTONS];
+	image PanelBG;
+	switch (state) {
+	case 0:	//mate
+		PanelBG = create_image("graphics/Mate.png");
+		break;
+	case 1:	//tie
+		PanelBG = create_image("graphics/Tie.png");
+		break;
+	case 2:	//check
+		PanelBG = create_image("graphics/Check.png");
+		break;
+	case 3:
+		PanelBG = create_image("graphics/transparent.png");
+	}
+	create_panel(ZERO_RECT, &p, 0, rect.x + 40, rect.y + 300, rect.w, rect.h,
+			PanelBG, p_children);
+	free_panel(w->children[2]);
+	w->children[2] = p;
+	draw_panel(w->main_window, w->children[1]);
+	draw_panel(w->main_window, w->children[2]);
+	return 1;
+}
+
+int draw_curr_state(window* w, Config *c) {
+	SDL_Rect menu_rect = create_rect(600, 0, 200, 600);
+	List* opponent_moves = init_list(0);
+	if (opponent_moves == NULL) { // malloc failure...
+		exit(0);
+		return 0;
+	}
+	if (!generate_legal_moves(c, opponent_moves)) { // malloc failure...
+		free_list(opponent_moves);
+		exit(0);
+		return 0;
+	}
+	int ch = check(c);
+	switch (ch) {
+	case 2: //malloc failure
+		printf("check function failed!");
+		c->END_GAME = 1;
+		free_list(opponent_moves);
+		exit(0);
+		return 0;
+	case 0: //no check
+
+		if (opponent_moves->size == 0) { //tie
+			draw_state(w, c, 1, menu_rect);
+			c->END_GAME = 1;
+		} else if (w->children[2].image.pathToImage[9] != 't') { //it was check before
+
+			draw_state(w, c, 3, menu_rect);
+		}
+		break;
+	case 1: //check
+		if (opponent_moves->size == 0) { //no moves
+			draw_state(w, c, 0, menu_rect);
+			printf("Mate! %s player wins!\n",
+					c->TURN == BLACK ? "white" : "black");
+			c->END_GAME = 1;
+		} else { //display check
+			draw_state(w, c, 2, menu_rect);
+			print_message(CHECK);
+		}
+		break;
+	}
+	free_list(opponent_moves);
+	return 1;
+
+}
+
 /** OnClick functions **/
+button custom_button(Location loc, char piece, int button_selected,
+		SDL_Rect p_rect) {
+	char button_path[23];
+	strcpy(button_path, "graphics/pieces/");
+	button_path[16] = (piece == EMPTY) ? 'e' : piece;
+	button_path[17] = (button_selected) ? 's' : 'u';
+	strcpy(&(button_path[18]), ".png");
+	button b;
+	image button_image = create_image(button_path);
+	create_button(&b, p_rect, 28 + loc.col * SQUARE_SIZE,
+			28 + (7 - loc.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
+			button_image);
+	return b;
+}
+
 int onClick_main_window(int event, window* w, Config* c) {
 	panel p;
 	switch (event) {
 	case NEW_GAME_CASE: {
-		draw_player_selection_window(w);
+		draw_player_selection_window(w, c);
 		break;
 	}
 	case LOAD_GAME_CASE: {
-		draw_slots_panel(&p, create_rect(20, 300, 200, 309), c);
+		create_slots_panel(&p, create_rect(20, 300, 200, 309), c);
 		free_panel(w->children[3]);
-		w->children[3]=p;
-		draw_panel(w->main_window,w->children[3]);
+		w->children[3] = p;
+		draw_panel(w->main_window, w->children[3]);
 		break;
 	}
 	case QUIT_CASE: {
@@ -640,10 +812,9 @@ int onClick_main_window(int event, window* w, Config* c) {
 	if (8 <= event && event <= 14) {
 		char path[18] = "SavedGames/x.txt\n";
 		path[11] = '0' + event - 7;
-		printf("path for load is %s\n", path);
 		load_file(path, c);
-		print_config(c);
-		draw_player_selection_window(w);
+//		print_config(c);
+		draw_player_selection_window(w, c);
 	}
 
 	return 0;
@@ -688,7 +859,7 @@ int onClick_player_selection_window(int event, window* w, Config* c) {
 		if (c->MODE == TWO_PLAYERS) {
 			return draw_game_window(w, c);
 		} else {
-			return draw_settings_window(w);
+			return draw_settings_window(w, c);
 		}
 	}
 	}
@@ -771,22 +942,23 @@ int onClick_set_board_window(int event, window* w, Config* c) {
 				free_panel(w->children[1]);
 				panel menu;
 				SDL_Rect menu_rect = create_rect(600, 0, 200, 600);
-				draw_game_menu(&menu, menu_rect, c);
+				create_game_menu(&menu, menu_rect, c);
 				w->children[1] = menu;
 				panel toBeFilled;
-				draw_empty_panel(&toBeFilled, ZERO_RECT,  c);
-				w->children[2] =toBeFilled;
-				w->children_len=3;
+				draw_empty_panel(&toBeFilled, ZERO_RECT, c);
+				w->children[2] = toBeFilled;
+				w->children_len = 3;
 				w->id = 'g';
-				return draw_panel(w->main_window,w->children[1]);
+				draw_panel(w->main_window, w->children[1]);
+				return draw_curr_state(w, c);
 			} else {
-				return draw_settings_window(w);
+				return draw_settings_window(w, c);
 			}
 		}
 	}
 	if (67 <= event && event <= 79) { // Piece is chosen
 		int i;
-		for (i = 67; i <= 79; i++) {
+		for (i = 67; i <= 79; i++) { //go over pieces, see if anyone is marked
 			char new_char = 'u';
 			button b = w->children[1].children[i - 67];
 			if (i == event) {
@@ -849,21 +1021,107 @@ int onClick_set_board_window(int event, window* w, Config* c) {
 }
 
 int onClick_game_window(int event, window* w, Config* c) {
+	if (4 <= event && event <= 67) { // Click on board
+		if (c->END_GAME == 1) {
+			return 0;
+		}
+		SDL_Rect rect = BOARD_RECT;
+		int dst_index = event - 4;
+		int src_index = -1;
+		int marked_index = -1;
+		Location dst_loc = index_to_loc(dst_index);
+		Location src_loc = create_loc(-1, -1);
+		Location marked_loc = create_loc(-1, -1);
+		int i;
+		button b;
+		for (i = 0; i < MAX_BUTTONS; i++) {
+			b = w->children[0].children[i];
+			if (b.image.pathToImage[17] == 's') { // The square's selected
+				if (src_index != -1) {
+					marked_loc = index_to_loc(i);
+					marked_index = i;
+					break;
+				} else src_index = i;
+				src_loc = index_to_loc(i);
+			}
+		}
+		if (marked_index != -1) { // best_move is currently shown
+			update_square(w, c, src_loc, BOARD(src_loc.row, src_loc.col),
+					w->children[0].children[src_index]);
+			update_square(w, c, marked_loc, BOARD(marked_loc.row, marked_loc.col),
+					w->children[0].children[marked_index]);
+			change_piece_marking(dst_loc, c, rect, w, dst_index, 1);
+		} else if (src_index != -1) { // a single piece is marked now
+			if (dst_index == src_index) { // a marked piece is pressed. unmark it.
+				change_piece_marking(src_loc, c, rect, w, src_index, 0);
+				return 0;
+			}
+			List* moves = init_list(0);
+			if (moves == NULL) { // malloc failure...
+				return 0;
+			}
+			if (!generate_legal_moves(c, moves)) { // malloc failure...
+				free_list(moves);
+				return 0;
+			}
+			Move move = create_move(src_loc, dst_loc, 'o', 0, c, 0); //need to fix?
+
+			char piece = BOARD(src_loc.row, src_loc.col);
+			int sign = islower(piece) ? 1 : -1;
+			int promote = ((islower(piece) && src_loc.row + sign == 7)
+					|| (isupper(piece) && src_loc.row + sign == 0));
+
+			if (make_move(c, moves, move)) { // make move
+				if (promote) { // Show promote panel
+					panel promote_panel;
+					draw_promote_panel(&promote_panel, create_rect(600, 137, 200, 309), c);
+					free_panel(w->children[2]);
+					w->children[2] = promote_panel;
+					draw_panel(w->main_window, w->children[1]);
+					draw_panel(w->main_window, w->children[2]);
+					c->END_GAME = 1;
+				}
+				c->TURN = 1 - c->TURN;
+				draw_move_made(w, c, src_index, dst_index, src_loc, dst_loc, &b,
+						rect);
+				draw_curr_state(w, c);
+			}
+
+		} else if (src_index == -1) { // no piece is marked right now
+									  // the user is choosing a piece to make a move with
+			if (is_piece_turn(BOARD(dst_loc.row, dst_loc.col), c->TURN)) {
+				change_piece_marking(dst_loc, c, rect, w, dst_index, 1);
+			}
+
+		}
+	}
 	panel p;
+	int children = w->children[2].children_len;
 	switch (event) {
 	case 68: // Get Move
-		draw_depths_panel(&p, create_rect(600,137,200,309), c);
-		free_panel(w->children[2]);
-		w->children[2]=p;
-		draw_panel(w->main_window,w->children[1]);
-		draw_panel(w->main_window,w->children[2]);
+		if (c->MODE == TWO_PLAYERS) {
+			if (children==4){//promote is showing
+				return 0;
+			}if (c->END_GAME==1){
+				return 0;
+			}
+
+			draw_depths_panel(&p, create_rect(600, 137, 200, 309), c);
+			free_panel(w->children[2]);
+			w->children[2] = p;
+			draw_panel(w->main_window, w->children[1]);
+			draw_panel(w->main_window, w->children[2]);
+		}
 		break;
 	case 69: // Save Game
-		draw_slots_panel(&p, create_rect(600,137,200,309), c);
+		if (children==4){//promote is showing
+			return 0;
+		}
+		create_slots_panel(&p, create_rect(600, 137, 200, 309), c);
 		free_panel(w->children[2]);
-		w->children[2]=p;
-		draw_panel(w->main_window,w->children[1]);
-		draw_panel(w->main_window,w->children[2]);
+		w->children[2] = p;
+		draw_panel(w->main_window, w->children[1]);
+		draw_panel(w->main_window, w->children[2]);
 		break;
 	case 70: // Main Menu
 		free_window(*w);
@@ -873,7 +1131,36 @@ int onClick_game_window(int event, window* w, Config* c) {
 		exit(0);
 		break;
 	}
-	int children=w->children[2].children_len;
+	if (72 <= event && event <= 75 && (children == 4)) { // Promote panel showing
+		char pieces[4] = {'q', 'n', 'b', 'r'};
+		char piece = (c->TURN == BLACK)? pieces[event-72] : toupper(pieces[event-72]);
+		char searched_man = (c->TURN == BLACK)? 'm' : 'M';
+		Location man_loc = create_loc(-1, -1);
+		int i;
+		int row = (c->TURN == WHITE)? 0 : BOARD_SIZE - 1;
+		for (i = 0; i < BOARD_SIZE; i++) {
+			printf("%c\n", BOARD(row, i));
+			if (BOARD(row, i) == searched_man) {
+				man_loc = create_loc(row, i);
+				break;
+			}
+		}
+		BOARD(man_loc.row, man_loc.col) = (c->TURN == BLACK)? piece : toupper(piece);
+		// promote man
+		button man_button = w->children[0].children[loc_to_index(man_loc)];
+		printf("location is=<%d,%d>\n",man_loc.row,man_loc.col);
+		printf("path is=%s\n",man_button.image.pathToImage);
+		update_square(w, c, man_loc, piece, man_button);
+
+		c->END_GAME = 0;
+		panel empty;
+		draw_empty_panel(&empty, create_rect(600, 137, 200, 309), c);
+		free_panel(w->children[2]);
+		w->children[2] = empty;
+		draw_panel(w->main_window, w->children[1]); // Behind empty
+		draw_panel(w->main_window, w->children[2]); // empty
+		draw_curr_state(w, c);
+	}
 	if (72 <= event && event <= 78 && (children == 7)) { // saved games panel showing
 		char path[18] = "SavedGames/x.txt\n";
 		path[11] = '0' + event - 71;
@@ -884,13 +1171,77 @@ int onClick_game_window(int event, window* w, Config* c) {
 		w->children[2] = p;
 		draw_panel(w->main_window, w->children[1]);
 		draw_panel(w->main_window, w->children[2]);
-	} else if (72 <= event && event <= 76 && (children == 6)) { //depth panel showing
+	} else if (72 <= event && event <= 76 && (children == 6)) { // depth panel showing
+		int first_marked_index = -1;
+		int second_marked_index = -1;
+		int piece_selected_index = -1;
+		int i;
+		button b;
+		for (i = 0; i < MAX_BUTTONS; i++) {
+			b = w->children[0].children[i];
+			if (b.image.pathToImage[17] == 's') {
+				if (b.image.pathToImage[16] == 's') {
+					second_marked_index = first_marked_index != -1 ? i : -1;
+					first_marked_index =
+							first_marked_index != -1 ? first_marked_index : i;
+				} else {
+					piece_selected_index = i;
+				}
+			}
+		}
+		if (first_marked_index != -1) {
+			Location loc1 = index_to_loc(first_marked_index);
+			update_square(w, c, loc1, BOARD(loc1.row, loc1.col),
+					w->children[0].children[first_marked_index]);
+		}
+		if (second_marked_index != -1) {
+			Location loc2 = index_to_loc(second_marked_index);
+			update_square(w, c, loc2, BOARD(loc2.row, loc2.col),
+					w->children[0].children[second_marked_index]);
+		}
+		if (piece_selected_index != -1) {
+			change_piece_marking(index_to_loc(piece_selected_index), c,
+					BOARD_RECT, w, piece_selected_index, 0);
+		}
+
+		int depth = event - 71;
+		List* moves = init_list(0);
+		if (moves == NULL) { // malloc failure...
+			return 0;
+		}
+		if (!generate_legal_moves(c, moves)) { // malloc failure...
+			free_list(moves);
+			return 0;
+		}
+
+		get_best_moves(c, moves, depth);
+		Move move = best_move(moves);
+		// Disappearing of get_move buttons
 		draw_empty_panel(&p, create_rect(600, 137, 200, 309), c);
 		free_panel(w->children[2]);
 		w->children[2] = p;
 		draw_panel(w->main_window, w->children[1]);
 		draw_panel(w->main_window, w->children[2]);
-
+		// Showing best_move on the board
+		int src_index = loc_to_index(move.src);
+		int dst_index = loc_to_index(move.dst);
+		image opaque = create_image("graphics/pieces/ss.png");
+		button src_opaque, dst_opaque;
+		create_button(&src_opaque, BOARD_RECT,
+				28 + move.src.col * SQUARE_SIZE,
+				28 + (7 - move.src.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
+				opaque);
+		create_button(&dst_opaque, BOARD_RECT,
+				28 + move.dst.col * SQUARE_SIZE,
+				28 + (7 - move.dst.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
+				opaque);
+		free_button(w->children[0].children[src_index]);
+		w->children[0].children[src_index] = src_opaque;
+		free_button(w->children[0].children[dst_index]);
+		w->children[0].children[dst_index] = dst_opaque;
+		draw_button(w->main_window, w->children[0].children[src_index]);
+		draw_button(w->main_window, w->children[0].children[dst_index]);
+		free_list(moves);
 	}
 
 	return 1;
@@ -898,7 +1249,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 
 int onClick(int event, window *w, Config* c) {
 	//printf("id is %c\n", w->id);
-	printf("button_pressed = %d\n", event);
+	//printf("button_pressed = %d\n", event);
 	if (event == -1) {
 		return -1;
 	}
@@ -918,11 +1269,70 @@ int onClick(int event, window *w, Config* c) {
 	return 0;
 }
 
+int update_square(window* w,Config* c, Location loc, char piece, button b) {
+	char path[23];
+	strcpy(path, b.image.pathToImage);
+	path[16] = (loc.row + loc.col) % 2 == 1 ? 'l' : 'd';
+	path[17] = 'u';
+	printf("%s\n", path);
+	edit_button(&b, path);
+	draw_button(w->main_window, b);
+	free_button(b);
+	button new_b = custom_button(loc, piece, 0, BOARD_RECT);
+	int index = loc_to_index(loc);
+	w->children[0].children[index] = new_b;
+	return draw_button(w->main_window, w->children[0].children[index]);
+}
+
+Location index_to_loc(int index) {
+	int col = index % BOARD_SIZE;
+	int row = (index - col) / BOARD_SIZE;
+	return create_loc(row, col);
+}
+
+int loc_to_index(Location loc) {
+	return BOARD_SIZE * loc.row + loc.col;
+}
+
+int draw_move_made(window* w, Config * c, int src_index, int dst_index,
+		Location src, Location dst, button* b, SDL_Rect rect) {
+	char new_path[23];
+	strcpy(new_path, b->image.pathToImage);
+	new_path[16] = (src.row + src.col) % 2 == 0 ? 'd' : 'l';
+	new_path[17] = 'u';
+	edit_button(&(w->children[0].children[src_index]), new_path);
+	new_path[16] = (dst.row + dst.col) % 2 == 0 ? 'd' : 'l';
+	edit_button(&(w->children[0].children[dst_index]), new_path);
+
+	//draw empty buttons
+	draw_button(w->main_window, w->children[0].children[src_index]);
+	draw_button(w->main_window, w->children[0].children[dst_index]);
+
+	//create_new location with piece button
+	button b1 = custom_button(create_loc(dst.row, dst.col),
+			BOARD(dst.row, dst.col), 0, rect);
+	free_button(w->children[0].children[dst_index]);
+	w->children[0].children[dst_index] = b1;
+	draw_button(w->main_window, w->children[0].children[dst_index]);
+	return 0;
+}
+
+int change_piece_marking(Location dst_loc, Config * c, SDL_Rect rect,
+		window * w, int index, int mark) {
+	button b1 = custom_button(dst_loc, BOARD(dst_loc.row, dst_loc.col), mark,
+			rect);
+	free_button(w->children[0].children[index]);
+	w->children[0].children[index] = b1;
+	draw_button(w->main_window, w->children[0].children[index]);
+	return 1;
+
+}
+
 int remove_piece(window * w, button * new_b, button * b, int index,
 		Location loc, char new_path[23]) {
 	strcpy(new_path, b->image.pathToImage);
 	new_path[16] = (loc.row + loc.col) % 2 == 0 ? 'd' : 'l';
-	new_path[17] = 's';
+	new_path[17] = 'u';
 	edit_button(new_b, new_path);
 	w->children[0].children[index] = *new_b;
 	return draw_button(w->main_window, w->children[0].children[index]);
@@ -939,8 +1349,7 @@ int toggle_buttons(window* w, int panel, char* path1, char* path2,
 	w->children[panel].children[child_index + 1] = right_button;
 
 	draw_button(w->main_window, w->children[panel].children[child_index]);
-	draw_button(w->main_window,
-			w->children[panel].children[child_index + 1]);
+	draw_button(w->main_window, w->children[panel].children[child_index + 1]);
 	return 1;
 }
 
@@ -950,18 +1359,17 @@ int toggle_diffs(window* w, char paths[5][30], int child_index) {
 		button new_button = w->children[2].children[child_index + j];
 		edit_button(&new_button, paths[j]);
 		w->children[2].children[child_index + j] = new_button;
-		draw_button(w->main_window,
-				w->children[2].children[child_index + j]);
+		draw_button(w->main_window, w->children[2].children[child_index + j]);
 		j++;
 	}
 	return 1;
 }
 
 int panel_pressed(SDL_Event mouseMotion, panel p) {
-	printf("Mouse moved to (%d,%d)\n", mouseMotion.motion.x,
-			mouseMotion.motion.y);
-	printf("panel rect is (%d,%d,%d,%d)\n", p.rect.x, p.rect.x + p.rect.w,
-			p.rect.y, p.rect.y + p.rect.h);
+	//printf("Mouse moved to (%d,%d)\n", mouseMotion.motion.x,
+	//mouseMotion.motion.y);
+	//printf("panel rect is (%d,%d,%d,%d)\n", p.rect.x, p.rect.x + p.rect.w,
+	//	p.rect.y, p.rect.y + p.rect.h);
 	return (p.rect.x <= mouseMotion.motion.x)
 			&& (mouseMotion.motion.x <= p.rect.x + p.rect.w)
 			&& (p.rect.y <= mouseMotion.motion.y)
@@ -969,8 +1377,8 @@ int panel_pressed(SDL_Event mouseMotion, panel p) {
 }
 
 int button_pressed(SDL_Event mouseMotion, button b) {
-	printf("Mouse moved to (%d,%d)\n", mouseMotion.motion.x,
-			mouseMotion.motion.y);
+//	printf("Mouse moved to (%d,%d)\n", mouseMotion.motion.x,
+//			mouseMotion.motion.y);
 	return (b.rect.x <= mouseMotion.motion.x)
 			&& (mouseMotion.motion.x <= b.rect.x + b.rect.w)
 			&& (b.rect.y <= mouseMotion.motion.y)
@@ -981,14 +1389,13 @@ int find_panel(SDL_Event mouseMotion, window w) {
 	panel child;
 	int i = 0;
 	int j = w.children_len + 1;
-	for (child = w.children[i]; i < w.children_len; child =
-			w.children[++i]) {
+	for (child = w.children[i]; i < w.children_len; child = w.children[++i]) {
 		if (panel_pressed(mouseMotion, child)) {
-			printf("panel pressed is x=%d,y=%d,h=%d,w=%d\n",child.rect.x,child.rect.y,child.rect.h,child.rect.w);
-			int res=find_button(mouseMotion, child, j);
-			if (res!=-1){
+//			printf("panel pressed is x=%d,y=%d,h=%d,w=%d\n",child.rect.x,child.rect.y,child.rect.h,child.rect.w);
+			int res = find_button(mouseMotion, child, j);
+			if (res != -1) {
 				return res;
-			}else{
+			} else {
 				j += child.children_len;
 			}
 		} else {
@@ -1002,8 +1409,7 @@ int find_panel(SDL_Event mouseMotion, window w) {
 int find_button(SDL_Event mouseMotion, panel p, int j) {
 	button child;
 	int i = 0;
-	for (child = p.children[i]; i < p.children_len; child =
-			p.children[++i]) {
+	for (child = p.children[i]; i < p.children_len; child = p.children[++i]) {
 		if (button_pressed(mouseMotion, child)) {
 			return j + i;
 		}
@@ -1017,8 +1423,8 @@ int FilterEvents(const SDL_Event *event) {
 
 	/* This quit event signals the closing of the window */
 	if (event->type == SDL_MOUSEMOTION) {
-		printf("Mouse moved to (%d,%d)\n", event->motion.x,
-				event->motion.y);
+//		printf("Mouse moved to (%d,%d)\n", event->motion.x,
+//				event->motion.y);
 		return (0); /* Drop it, we've handled it */
 	}
 	return (1);
@@ -1029,8 +1435,7 @@ int free_window(window w) {
 	SDL_FreeSurface(w.main_window);
 	panel child;
 	int i = 0;
-	for (child = w.children[i]; i < w.children_len; child =
-			w.children[++i]) {
+	for (child = w.children[i]; i < w.children_len; child = w.children[++i]) {
 		free_panel(child);
 	}
 	return 1;
@@ -1040,14 +1445,13 @@ int free_panel(panel p) {
 	SDL_FreeSurface(p.panel_window);
 	button child;
 	int i = 0;
-	for (child = p.children[i]; i < p.children_len; child =
-			p.children[++i]) {
+	for (child = p.children[i]; i < p.children_len; child = p.children[++i]) {
 		free_button(child);
 	}
 	return 1;
 }
 
 int free_button(button b) {
-		SDL_FreeSurface(b.button_window);
-		return 1;
-	}
+	SDL_FreeSurface(b.button_window);
+	return 1;
+}

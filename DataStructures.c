@@ -1,5 +1,4 @@
 # include "DataStructures.h"
-# include <time.h>
 # include "Minimax.h"
 
 Location create_loc(int i, int j) {
@@ -60,7 +59,7 @@ int print_move(Move move) {
 		printf("queen");
 		break;
 	}
-//	printf(" %d\n",move.score);
+	printf(" %d\n",move.score);
 //	print_board_board(move.board);
 	return 0;
 }
@@ -110,7 +109,7 @@ void init_board(Config* c) {
 	int i, j;
 	for (j = 0; j < BOARD_SIZE; j++) {
 		BOARD(BOARD_SIZE-1,j) = toupper(BOARD(0,j) = pieces[j]);
-		BOARD(BOARD_SIZE-2,j) = toupper(BOARD(1,j) = WHITE_P);
+		BOARD(BOARD_SIZE-2,j) = toupper(BOARD(1,j) = 'm');
 	}
 	for (i = 2; i < BOARD_SIZE-2; i++) {
 		for (j = 0; j < BOARD_SIZE; j++ )
@@ -128,7 +127,6 @@ int clear_board(Config* c) {
 	}
 	return 0;
 }
-
 
 int copy_board(char board[BOARD_SIZE][BOARD_SIZE],char next_board[BOARD_SIZE][BOARD_SIZE]) {
 	int i, j;
@@ -155,7 +153,7 @@ Config create_new_config(PtrConfig c, int turn, char board[BOARD_SIZE][BOARD_SIZ
 }
 
 void print_config(PtrConfig c){
-	printf("score=%d\n",score(c,c->TURN));
+//	printf("score=%d\n",score(c,c->TURN));
 	printf("depth=%d\n",c->DEPTH);
 	printf("mode=%d\n",c->MODE);
 	printf("user_color=%d\n",c->USER_COLOR);
@@ -233,9 +231,6 @@ int get_score(PtrConfig c, int depth,List * legal_moves,Move move){
 	return 1;
 }
 
-
-
-
 Move best_move(List* moves) {
 	int max_score = -10000;
 	Move best_move;
@@ -254,14 +249,16 @@ Move best_move(List* moves) {
 		i++;
 	}
 	srand(time(NULL));
-	int num= rand()%best_num-1;
-	printf("rand_number is=%d\n",num);
+
+	int num= (rand()%(best_num))+1;
 	i=0;
 	head = moves->first;
 	while(i<num){
 		if (head->m.score==max_score){
 			i++;
-			if (i==num){break;}
+			if (i==num){
+				break;
+			}
 		}
 		head = head->next;
 	}
@@ -383,4 +380,3 @@ int compare_move(Move this, Move other) {
 int compare_loc(Location this, Location other) {
 	return this.col == other.col && this.row == other.row;
 }
-

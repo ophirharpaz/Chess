@@ -7,22 +7,29 @@ C_SRCS += \
 ../DataStructures.c \
 ../FileWriter.c \
 ../Flow.c \
-../Minimax.c \
-../gui.c 
+../Gui.c \
+../Minimax.c 
+
+O_SRCS += \
+../DataStructures.o \
+../FileWriter.o \
+../Flow.o \
+../Gui.o \
+../Minimax.o 
 
 OBJS += \
 ./DataStructures.o \
 ./FileWriter.o \
 ./Flow.o \
-./Minimax.o \
-./gui.o 
+./Gui.o \
+./Minimax.o 
 
 C_DEPS += \
 ./DataStructures.d \
 ./FileWriter.d \
 ./Flow.d \
-./Minimax.d \
-./gui.d 
+./Gui.d \
+./Minimax.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes
