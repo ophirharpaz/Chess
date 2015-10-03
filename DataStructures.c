@@ -1,6 +1,17 @@
 # include "DataStructures.h"
 # include "Minimax.h"
 
+void print_config(PtrConfig c){
+//	printf("score=%d\n",score(c,c->TURN));
+	printf("depth=%d\n",c->DEPTH);
+	printf("mode=%d\n",c->MODE);
+	printf("user_color=%d\n",c->USER_COLOR);
+	printf("end_game=%d\n",c->END_GAME);
+	printf("turn=%d\n",c->TURN);
+	printf("difficulty=%d\n",c->DIFFICULTY);
+	print_board(c);
+}
+
 Location create_loc(int i, int j) {
 	Location loc = {i, j};
 	return loc;
@@ -36,11 +47,6 @@ int compare_locations(Location l1, Location l2) {
 
 // Prints struct Move as required
 int print_move(Move move) {
-	if (move.type == 'c') {
-		printf("castle ");
-		print_location(move.src);
-		return 0;
-	}
 	print_location(move.src);
 	printf(" to ");
 	print_location(move.dst);
@@ -59,8 +65,7 @@ int print_move(Move move) {
 		printf("queen");
 		break;
 	}
-	printf(" %d\n",move.score);
-//	print_board_board(move.board);
+//	printf(" %d\n",move.score);
 	return 0;
 }
 
@@ -152,19 +157,7 @@ Config create_new_config(PtrConfig c, int turn, char board[BOARD_SIZE][BOARD_SIZ
 	return new;
 }
 
-void print_config(PtrConfig c){
-//	printf("score=%d\n",score(c,c->TURN));
-	printf("depth=%d\n",c->DEPTH);
-	printf("mode=%d\n",c->MODE);
-	printf("user_color=%d\n",c->USER_COLOR);
-	printf("end_game=%d\n",c->END_GAME);
-	printf("turn=%d\n",c->TURN);
-	printf("castle=%d\n",c->CASTLE);
-	printf("difficulty=%d\n",c->DIFFICULTY);
-	print_board(c);
-}
-
-List* init_list(int sort) {
+List* init_list() {
 	List* new = malloc(sizeof(List));
 	if (new == NULL) {
 		perror_message("malloc");
@@ -172,7 +165,6 @@ List* init_list(int sort) {
 	}
 	new->first = NULL;
 	new->size = 0;
-	new->sort= sort;
 	return new;
 }
 
@@ -195,7 +187,6 @@ int get_best_moves(PtrConfig c,List * legal_moves, int depth){
 	alphabeta(new,legal_moves);
 	int best=0;
 	Node * curr_node;
-	printf("in get_best_moves\n");
 	for (curr_node=legal_moves->first;curr_node!=NULL;curr_node=curr_node->next){
 		best=max(best,curr_node->m.score);
 	}for (curr_node=legal_moves->first;curr_node!=NULL;curr_node=curr_node->next){
@@ -269,16 +260,10 @@ Move best_move(List* moves) {
 int make_legal_move(char board[BOARD_SIZE][BOARD_SIZE], Move move, int turn) {
 	char piece = board[move.src.row][move.src.col];
 	board[move.src.row][move.src.col] = EMPTY;
-	switch (move.type) {
-	case 'o':
+	if (move.type == 'o') {
 		board[move.dst.row][move.dst.col] = piece;
-		break;
-	case 'c':
-		// castle(c, move);
-		break;
-	default:
-		board[move.dst.row][move.dst.col] =
-				turn == BLACK ? toupper(move.type) : move.type;
+	} else {
+		board[move.dst.row][move.dst.col] = turn == BLACK ? toupper(move.type) : move.type;
 	}
 	return 1;
 }
@@ -301,33 +286,6 @@ void pop_data(List* list) {
 	list->size--;
 }
 
-void rec_insert_after(PtrNode head,PtrNode new){
-	if (head->next==NULL || (head->m.score <= new->m.score && new->m.score<= head->next->m.score)){
-		new->next=head->next;
-		head->next=new;
-	}else{
-		rec_insert_after(head->next,new);
-	}
-}
-
-void print_board_board(char board[BOARD_SIZE][BOARD_SIZE]) {
-	int i, j;
-	print_line();
-	for (j = BOARD_SIZE - 1; j >= 0; j--) {
-		printf((j < 9 ? " %d" : "%d"), j + 1);
-		for (i = 0; i < BOARD_SIZE; i++) {
-			printf("| %c ", board[j][i]);
-		}
-		printf("|\n");
-		print_line();
-	}
-	printf("   ");
-	for (j = 0; j < BOARD_SIZE; j++) {
-		printf(" %c  ", (char) ('a' + j));
-	}
-	printf("\n");
-}
-
 int insert_move(List* list, Move move) {
 	Node* new = create_node(move);
 	if (new == NULL) {
@@ -339,12 +297,8 @@ int insert_move(List* list, Move move) {
 		list->size++;
 		return 1;
 	}
-	if (new->m.score>list->first->m.score ||!list->sort){
-		new->next = list->first;
-		list->first = new;
-	}else{
-		rec_insert_after(list->first,new);
-	}
+	new->next = list->first;
+	list->first = new;
 	list->size++;
 	return 1;
 }

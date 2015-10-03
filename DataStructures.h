@@ -35,7 +35,6 @@ typedef struct Node* PtrNode;
 typedef struct List{
 	struct Node* first;
 	int size;
-	int sort;
 } List;
 
 typedef struct Config {
@@ -44,7 +43,6 @@ typedef struct Config {
 	int USER_COLOR;
 	int END_GAME;
 	int TURN;
-	int CASTLE;
 	int DIFFICULTY;
 	char board [BOARD_SIZE][BOARD_SIZE];
 } Config;
@@ -60,10 +58,7 @@ void print_board(PtrConfig c);
 void init_board(PtrConfig c);
 int clear_board(PtrConfig c);
 int copy_board(char board[BOARD_SIZE][BOARD_SIZE],char next_board[BOARD_SIZE][BOARD_SIZE]);
-void print_board_board(char board[BOARD_SIZE][BOARD_SIZE]);
-
-
-List* init_list(int sort);
+List* init_list();
 Move best_move(List* moves);
 int get_best_moves(PtrConfig c,List * legal_moves, int depth);
 int get_score(PtrConfig c, int depth,List * legal_moves,Move move);

@@ -17,7 +17,7 @@ int main_gui(Config c) {
 	SDL_Event mouseMotion;
 	while (SDL_WaitEvent(&event) >= 0) {
 		if(w.id=='g'&&c.MODE==ONE_PLAYER && c.TURN!=c.USER_COLOR && c.END_GAME==0){
-			List * PC_moves=init_list(0);
+			List * PC_moves=init_list();
 			if (PC_moves==NULL){
 				exit(0);
 				return 0;
@@ -32,9 +32,7 @@ int main_gui(Config c) {
 				exit(0);
 				return 0;
 			}
-			print_list(PC_moves);
 			Move comp_move = best_move(PC_moves);
-			printf("Computer move: "); print_move(comp_move);
 			int src_index, dst_index;
 			src_index = loc_to_index(comp_move.src);
 			dst_index = loc_to_index(comp_move.dst);
@@ -46,49 +44,23 @@ int main_gui(Config c) {
 			free_list(PC_moves);
 		}
 		switch (event.type) {
-		case SDL_ACTIVEEVENT: {
-			if (event.active.state & SDL_APPACTIVE) {
-				if (event.active.gain) {
-//					printf("App activated\n");
-				} else {
-//					printf("App iconified\n");
-				}
-			}
-		}
-			break;
-
 		case SDL_MOUSEBUTTONDOWN: {
 			Uint8 *keys;
 			keys = SDL_GetKeyState(NULL);
 			if (keys[SDLK_ESCAPE] == SDL_PRESSED) {
-				printf("Bye bye...\n");
 				exit(0);
 			} else {
 				int pressed_button = find_panel(mouseMotion, w);
 				onClick(pressed_button, &w, &c);
 			}
-
 		}
-			break;
-
+		break;
 		case SDL_MOUSEMOTION: {
 			mouseMotion = event;
 
 			break;
 		}
-
-		case SDL_KEYDOWN: {
-			Uint8 *keys;
-
-			keys = SDL_GetKeyState(NULL);
-			if (keys[SDLK_TAB] == SDL_PRESSED) {
-				printf("Tabush...\n");
-			}
-		}
-			break;
-
 		case SDL_QUIT: {
-			printf("Quit requested, quitting.\n");
 			exit(0);
 		}
 			break;
@@ -226,7 +198,6 @@ int draw_main_window(window * w, PtrConfig c) {
 	c->MODE = 1;
 	c->TURN = 1;
 	c->USER_COLOR = 1;
-	c->CASTLE = 1;
 	c->END_GAME = 0;
 	init_board(c);
 //	print_config(c);
@@ -621,27 +592,29 @@ int create_slots_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 	button slots_children[MAX_BUTTONS];
 
 	// initialize buttons
+	int endOfLoop = ((SLOTS_NUM % 2) == 0)? SLOTS_NUM : SLOTS_NUM - 1;
 	int i;
-	char path[19] = "graphics/diskx.png";
-	for (i = 0; i < 6; i++) {
+	char path[19] = "graphics/slotx.png";
+	for (i = 0; i < endOfLoop; i++) {
 		button b;
-		path[13] = '0' + (i + 1);
+		path[13] = '0' + i;
 		image button_image = create_image(path);
 		create_button(&b, slots_rect, 32 + (54 + 3 * SPACE) * (i % 2),
-				((i - (i % 2)) / 2) * (54 + SPACE) + SPACE, 54, 54,
+				((i - (i % 2)) / 2) * (54 + SPACE), 54, 54,
 				button_image);
 		slots_children[i] = b;
 	}
-	button b;
-	path[13] = '0' + (7);
-	image button_image = create_image(path);
-	create_button(&b, slots_rect, 73, 3 * (54 + SPACE) + SPACE, 54, 54,
-			button_image);
-	slots_children[6] = b;
+	if ((SLOTS_NUM % 2) == 1) { // odd number of slots
+		button b;
+		path[13] = '0' + i;
+		image button_image = create_image(path);
+		create_button(&b, slots_rect, 73, ((i - (i % 2)) / 2) * (54 + SPACE), 54, 54,
+				button_image);
+		slots_children[i] = b;
+	}
 
 	image SlotsPanelBG = create_image("graphics/transparent.png");
-
-	create_panel(ZERO_RECT, slots_panel, 7, slots_rect.x, slots_rect.y,
+	create_panel(ZERO_RECT, slots_panel, SLOTS_NUM, slots_rect.x, slots_rect.y,
 			slots_rect.w, slots_rect.h, SlotsPanelBG, slots_children);
 	return 1;
 }
@@ -728,7 +701,7 @@ int draw_state(window* w, Config *c, int state, SDL_Rect rect) {
 
 int draw_curr_state(window* w, Config *c) {
 	SDL_Rect menu_rect = create_rect(600, 0, 200, 600);
-	List* opponent_moves = init_list(0);
+	List* opponent_moves = init_list();
 	if (opponent_moves == NULL) { // malloc failure...
 		exit(0);
 		return 0;
@@ -797,7 +770,7 @@ int onClick_main_window(int event, window* w, Config* c) {
 		break;
 	}
 	case LOAD_GAME_CASE: {
-		create_slots_panel(&p, create_rect(20, 300, 200, 309), c);
+		create_slots_panel(&p, create_rect(20, 287, 200, 310), c);
 		free_panel(w->children[3]);
 		w->children[3] = p;
 		draw_panel(w->main_window, w->children[3]);
@@ -809,9 +782,9 @@ int onClick_main_window(int event, window* w, Config* c) {
 		break;
 	}
 	}
-	if (8 <= event && event <= 14) {
+	if (8 <= event && event <= (8 + SLOTS_NUM - 1)) {
 		char path[18] = "SavedGames/x.txt\n";
-		path[11] = '0' + event - 7;
+		path[11] = '0' + event - 8;
 		load_file(path, c);
 //		print_config(c);
 		draw_player_selection_window(w, c);
@@ -1046,6 +1019,9 @@ int onClick_game_window(int event, window* w, Config* c) {
 			}
 		}
 		if (marked_index != -1) { // best_move is currently shown
+			if (!is_piece_turn(BOARD(dst_loc.row,dst_loc.col),c->TURN)){
+				return 0;
+			}
 			update_square(w, c, src_loc, BOARD(src_loc.row, src_loc.col),
 					w->children[0].children[src_index]);
 			update_square(w, c, marked_loc, BOARD(marked_loc.row, marked_loc.col),
@@ -1056,7 +1032,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 				change_piece_marking(src_loc, c, rect, w, src_index, 0);
 				return 0;
 			}
-			List* moves = init_list(0);
+			List* moves = init_list();
 			if (moves == NULL) { // malloc failure...
 				return 0;
 			}
@@ -1096,11 +1072,10 @@ int onClick_game_window(int event, window* w, Config* c) {
 		}
 	}
 	panel p;
-	int children = w->children[2].children_len;
 	switch (event) {
 	case 68: // Get Move
 		if (c->MODE == TWO_PLAYERS) {
-			if (children==4){//promote is showing
+			if (curr_panel(w->children[2]) == 'p'){ // promote is showing
 				return 0;
 			}if (c->END_GAME==1){
 				return 0;
@@ -1114,10 +1089,10 @@ int onClick_game_window(int event, window* w, Config* c) {
 		}
 		break;
 	case 69: // Save Game
-		if (children==4){//promote is showing
+		if (curr_panel(w->children[2]) == 'p'){ // promote is showing
 			return 0;
 		}
-		create_slots_panel(&p, create_rect(600, 137, 200, 309), c);
+		create_slots_panel(&p, create_rect(600, 150, 200, 310), c);
 		free_panel(w->children[2]);
 		w->children[2] = p;
 		draw_panel(w->main_window, w->children[1]);
@@ -1131,7 +1106,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 		exit(0);
 		break;
 	}
-	if (72 <= event && event <= 75 && (children == 4)) { // Promote panel showing
+	if (72 <= event && event <= 75 && curr_panel(w->children[2]) == 'p') { // Promote panel showing
 		char pieces[4] = {'q', 'n', 'b', 'r'};
 		char piece = (c->TURN == BLACK)? pieces[event-72] : toupper(pieces[event-72]);
 		char searched_man = (c->TURN == BLACK)? 'm' : 'M';
@@ -1139,7 +1114,6 @@ int onClick_game_window(int event, window* w, Config* c) {
 		int i;
 		int row = (c->TURN == WHITE)? 0 : BOARD_SIZE - 1;
 		for (i = 0; i < BOARD_SIZE; i++) {
-			printf("%c\n", BOARD(row, i));
 			if (BOARD(row, i) == searched_man) {
 				man_loc = create_loc(row, i);
 				break;
@@ -1148,8 +1122,6 @@ int onClick_game_window(int event, window* w, Config* c) {
 		BOARD(man_loc.row, man_loc.col) = (c->TURN == BLACK)? piece : toupper(piece);
 		// promote man
 		button man_button = w->children[0].children[loc_to_index(man_loc)];
-		printf("location is=<%d,%d>\n",man_loc.row,man_loc.col);
-		printf("path is=%s\n",man_button.image.pathToImage);
 		update_square(w, c, man_loc, piece, man_button);
 
 		c->END_GAME = 0;
@@ -1161,17 +1133,16 @@ int onClick_game_window(int event, window* w, Config* c) {
 		draw_panel(w->main_window, w->children[2]); // empty
 		draw_curr_state(w, c);
 	}
-	if (72 <= event && event <= 78 && (children == 7)) { // saved games panel showing
+	if (72 <= event && event <= (72 + SLOTS_NUM - 1) && (curr_panel(w->children[2]) == 's')) { // saved games panel showing
 		char path[18] = "SavedGames/x.txt\n";
-		path[11] = '0' + event - 71;
-		printf("path is %s\n", path);
+		path[11] = '0' + event - 72;
 		save_file(path, c);
 		draw_empty_panel(&p, create_rect(600, 137, 200, 309), c);
 		free_panel(w->children[2]);
 		w->children[2] = p;
 		draw_panel(w->main_window, w->children[1]);
 		draw_panel(w->main_window, w->children[2]);
-	} else if (72 <= event && event <= 76 && (children == 6)) { // depth panel showing
+	} else if (72 <= event && event <= 76 && (curr_panel(w->children[2]) == 'd')) { // depth panel showing
 		int first_marked_index = -1;
 		int second_marked_index = -1;
 		int piece_selected_index = -1;
@@ -1205,7 +1176,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 		}
 
 		int depth = event - 71;
-		List* moves = init_list(0);
+		List* moves = init_list();
 		if (moves == NULL) { // malloc failure...
 			return 0;
 		}
@@ -1248,7 +1219,6 @@ int onClick_game_window(int event, window* w, Config* c) {
 }
 
 int onClick(int event, window *w, Config* c) {
-	//printf("id is %c\n", w->id);
 	//printf("button_pressed = %d\n", event);
 	if (event == -1) {
 		return -1;
@@ -1274,7 +1244,6 @@ int update_square(window* w,Config* c, Location loc, char piece, button b) {
 	strcpy(path, b.image.pathToImage);
 	path[16] = (loc.row + loc.col) % 2 == 1 ? 'l' : 'd';
 	path[17] = 'u';
-	printf("%s\n", path);
 	edit_button(&b, path);
 	draw_button(w->main_window, b);
 	free_button(b);
@@ -1366,10 +1335,6 @@ int toggle_diffs(window* w, char paths[5][30], int child_index) {
 }
 
 int panel_pressed(SDL_Event mouseMotion, panel p) {
-	//printf("Mouse moved to (%d,%d)\n", mouseMotion.motion.x,
-	//mouseMotion.motion.y);
-	//printf("panel rect is (%d,%d,%d,%d)\n", p.rect.x, p.rect.x + p.rect.w,
-	//	p.rect.y, p.rect.y + p.rect.h);
 	return (p.rect.x <= mouseMotion.motion.x)
 			&& (mouseMotion.motion.x <= p.rect.x + p.rect.w)
 			&& (p.rect.y <= mouseMotion.motion.y)
@@ -1377,8 +1342,6 @@ int panel_pressed(SDL_Event mouseMotion, panel p) {
 }
 
 int button_pressed(SDL_Event mouseMotion, button b) {
-//	printf("Mouse moved to (%d,%d)\n", mouseMotion.motion.x,
-//			mouseMotion.motion.y);
 	return (b.rect.x <= mouseMotion.motion.x)
 			&& (mouseMotion.motion.x <= b.rect.x + b.rect.w)
 			&& (b.rect.y <= mouseMotion.motion.y)
@@ -1416,6 +1379,12 @@ int find_button(SDL_Event mouseMotion, panel p, int j) {
 	}
 	return -1;
 
+}
+
+char curr_panel(panel p) {
+	if (p.children_len == 0) return 'r';
+	if (tolower(p.children[0].image.pathToImage[16]) == 'q') return 'p';
+	return tolower(p.children[0].image.pathToImage[9]); // First char of imagePath is a unique identifier of its parent panel p;
 }
 
 /* This function may run in a separate event thread */

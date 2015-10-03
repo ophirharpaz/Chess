@@ -86,15 +86,13 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 		if (s == 20000) { //malloc failure
 			free_list(moves);
 		}
-//		print_config(&c);
-//		printf("\n--------------------------------------------------------------\n");
 		return s;
 	}
 	if (max_player) {
 		v = -100000;
 		while (i < moves->size) {
 			Move child = child_node->m;
-			List * next_moves = init_list(0);
+			List * next_moves = init_list();
 			if (next_moves == NULL) {
 				free_list(moves);
 				return 20000;
@@ -103,7 +101,6 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 					c.DEPTH - 1);
 			int new_score = rec_alphabeta(new, next_moves, depth, alpha, beta,
 					0, score_turn, board_num);
-			//printf("new_score is=%d\n",new_score);
 			if (new_score == 20000) {
 				free_list(moves);
 				return 20000;
@@ -131,7 +128,7 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 		v = 100000;
 		while (i < moves->size) {
 			Move child = child_node->m;
-			List * next_moves = init_list(0);
+			List * next_moves = init_list();
 			if (next_moves == NULL) {
 				free_list(moves);
 				return 20000;

@@ -74,14 +74,6 @@ int load_file(char* path, PtrConfig c) {
 		load_line(c, curr_line, i);
 		curr_line = next_line(curr_line);
 	}
-
-	char *line16 = next_line(curr_line);
-	if (strncmp(line16, "</game>", 7) == 0) {
-		printf("%s\n", line16);
-		return 1;
-	}
-	char *line17 = next_line(line16);
-	c->CASTLE = (compare_line_field(line17, "1") == 0) ? WHITE : BLACK;
 	c->END_GAME=0;
 	fclose(ifp);
 	return 1;
@@ -171,15 +163,12 @@ int save_file(char* path, PtrConfig c) {
 			return 0;
 		}
 	}
-	if (fprintf(fp, "\t</board>\n\t<general>\n") < 0) {
+	if (fprintf(fp, "\t</board>\n") < 0) {
 		perror_message("fprintf");
 		return 0;
 	}
-	res[0] = c->CASTLE + '0';
-	if (!write_line(fp, "castle", res, 2)) {
-		return 0;
-	}
-	if (fprintf(fp, "\t</general>\n</game>") < 0) {
+
+	if (fprintf(fp, "</game>") < 0) {
 		perror_message("fprintf");
 		return 0;
 	}

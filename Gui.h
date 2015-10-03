@@ -13,6 +13,7 @@
 # include "Flow.h"
 
 #define MAX_BUTTONS 64
+#define SLOTS_NUM 10
 #define BUTTON_W 182
 #define BUTTON_H 54
 #define ZERO_RECT create_rect(0, 0, 0, 0)
@@ -86,7 +87,7 @@ int main_gui(Config c);
 int create_button(button * b,SDL_Rect parent_rect, int x_pos, int y_pos, int width, int height, image image);
 label create_label(int x_pos, int y_pos, char text[100]);
 image create_image(char pathToImage[100]);
-int create_panel(SDL_Rect parent_rect,panel *p,int children_len,int x_pos, int y_pos, int width, int height,image image, button children[10]);
+int create_panel(SDL_Rect parent_rect, panel *p, int children_len, int x_pos, int y_pos, int width, int height, image image, button children[10]);
 int create_window(window* w, int children_len, char header[20], panel children[10], image bgImage, char id);
 SDL_Rect create_rect(int x, int y, int width, int height);
 int edit_button(button* b, char* pathToImage);
@@ -131,6 +132,7 @@ int create_game_menu(panel* menu_panel, SDL_Rect menu_rect, Config* c);
 int onClick_set_board_window(int event, window* w, Config* c);
 int find_panel(SDL_Event mouseMotion,window w);
 int find_button(SDL_Event mouseMotion,panel p,int j);
+char curr_panel(panel p);
 
 /* Toggle functions */
 int toggle_buttons(window* w, int panel, char* path1, char* path2, int child_index);

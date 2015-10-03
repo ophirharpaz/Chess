@@ -14,7 +14,7 @@ int main(int argc, char* argv[]) {
 int test(PtrConfig c, int num) {
 	Location src = create_loc(1, 4);
 	if (num == 1) {
-		List * moves = init_list(0);
+		List * moves = init_list();
 		Move move = { src, create_loc(3, 5) };
 		Move move_2 = { src, create_loc(2, 5) };
 		insert_move(moves, move);
@@ -23,21 +23,20 @@ int test(PtrConfig c, int num) {
 		free_list(moves);
 	}
 	else if (num == 2) {//create moves for c2
-		List * moves = init_list(0);
+		List * moves = init_list();
 		generate_moves_loc(c, moves, src,1);
 		print_list(moves);
 		free_list(moves);
 	}
 	else if (num == 3) {
-		printf("reached line=%d\n", __LINE__);
-		List * moves = init_list(0);
+		List * moves = init_list();
 		generate_moves(c, moves,1);
 		print_list(moves);
 		free_list(moves);
 	}
 	else if (num == 4) {
 		printf("reached line=%d\n", __LINE__);
-		List * moves = init_list(0);
+		List * moves = init_list();
 		BOARD(4,4)='b';
 		BOARD(1,4)=EMPTY;
 		print_board(c);
@@ -46,14 +45,14 @@ int test(PtrConfig c, int num) {
 		free_list(moves);
 	}else if (num == 5) {
 		printf("reached line=%d\n", __LINE__);
-		List * moves = init_list(0);
+		List * moves = init_list();
 		print_board(c);
 		generate_legal_moves(c, moves);
 		print_list(moves);
 		free_list(moves);
 	}else if (num == 6) {
 		printf("reached line=%d\n", __LINE__);
-		List * moves = init_list(0);
+		List * moves = init_list();
 		generate_legal_moves(c,moves);
 		c->DEPTH=4;
 		alphabeta(*c, moves);//config, move list,depth,alpha,beta,maximize player,score_turn
@@ -66,7 +65,7 @@ int test(PtrConfig c, int num) {
 		int depth=3;
 		BOARD(5,6)='m';
 		BOARD(1,5)=' ';
-		List * moves = init_list(0);
+		List * moves = init_list();
 		generate_legal_moves(c,moves);
 		get_best_moves(c,moves,depth);
 	}else if (num == 8) {//checks get_score
@@ -76,7 +75,7 @@ int test(PtrConfig c, int num) {
 		BOARD(1,5)=' ';
 		Move move= create_move(create_loc(5,6),create_loc(6,7),'o',0,c,1);
 		int depth=3;
-		List * moves = init_list(0);
+		List * moves = init_list();
 		generate_legal_moves(c,moves);
 		get_score(c,depth,moves,move);
 	}
@@ -151,13 +150,11 @@ int settings_state(PtrConfig c) {
 			if (res == 1) {
 				print_message(NO_PIECE);
 			}
-		} else if (strcmp(input, "print\n") == 0) {//remove print config later
-			print_board(c);
 		} else if (strcmp(input, "quit\n") == 0) {
 			c->END_GAME = 1;
 			break;
 		} else if (strcmp(input, "start\n") == 0) {
-			if (ok_to_start(c)){//need to add no pawns in final rows
+			if (ok_to_start(c)){
 				break;
 			}
 			print_message(WRONG_BOARD_INITIALIZATION);
@@ -190,7 +187,7 @@ int set_minimax_depth(char* p, Config* config) {
 
 int game_state(PtrConfig c) {
 	while (!c->END_GAME) {
-		List* moves = init_list(0);
+		List* moves = init_list();
 		if (moves == NULL) { // malloc failure...
 			return 0;
 		}
@@ -230,7 +227,7 @@ int game_state(PtrConfig c) {
 
 int check(Config* c) {
 	Location king_location = piece_location(c, c->TURN == WHITE ? 'k' : 'K');
-	List* moves = init_list(0);
+	List* moves = init_list();
 	if (moves==NULL){
 		return 2;
 	}
@@ -242,7 +239,6 @@ int check(Config* c) {
 	while (curr != NULL) {
 		if (compare_locations(king_location, curr->m.dst) && curr->m.threat) {
 			c->TURN=!c->TURN;
-		//	printf("king is taken in this board!\n");
 			free_list(moves);
 			return 1;
 		}
@@ -376,7 +372,7 @@ int player_wins(PtrConfig c){
 	if (ch==2){
 		return -1;
 	}
-	List* moves = init_list(0);
+	List* moves = init_list();
 	if (moves == NULL) { // malloc failure...
 		return -1;
 	}
