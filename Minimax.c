@@ -1,13 +1,68 @@
 # include "Minimax.h"
 # include "Flow.h"
 
+int best_score(PtrConfig c, int turn) {
+	int wins = player_wins(c);
+	if (wins == -1) { //malloc failure
+		return 20000;
+	}
+	if (wins == 1) { //player wins
+		if (c->TURN==turn){
+			return 1000000;
+		}return -1000000;
+	}
+	if (wins == 2) { // player ties
+		return -999999;
+	}
+	int score = 0;
+	int i, j;
+	for (i = 0; i < BOARD_SIZE; i++) {
+		for (j = 0; j < BOARD_SIZE; j++) {
+			score += best_piece_score(BOARD(i, j), turn);
+		}
+	}
+	return score;
+}
+
+int best_piece_score(char piece, int turn) {
+	if (piece == EMPTY) {
+		return 0;
+	}
+	int p = islower(piece) > 0 ? WHITE : BLACK;
+	int sign = ((p == turn) ? 1 : -1);
+	piece = tolower(piece);
+	int pawn = 100;
+	int knight = 320;
+	int bishop = 325;
+	int rook = 500;
+	int queen = 975;
+	int king = 32767;
+	switch (piece) {
+	case 'm':
+		return pawn * sign;
+	case 'n':
+		return knight * sign;
+	case 'b':
+		return bishop * sign;
+	case 'r':
+		return rook * sign;
+	case 'q':
+		return queen * sign;
+	case 'k':
+		return king * sign;
+	}
+	return 0;
+}
+
 int score(PtrConfig c, int turn) {
 	int wins = player_wins(c);
 	if (wins == -1) { //malloc failure
 		return 20000;
 	}
 	if (wins == 1) { //player wins
-		return 500;
+		if (c->TURN==turn){
+			return 500;
+		}return -500;
 	}
 	if (wins == 2) { // player ties
 		return -499;
@@ -82,14 +137,14 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 		if (moves->size == 0) {
 			c.TURN = 1 - c.TURN;
 		}
-		int s = score(&c, score_turn);
+		int s = c.BEST ? best_score(&c, score_turn):score(&c, score_turn);
 		if (s == 20000) { //malloc failure
 			free_list(moves);
 		}
 		return s;
 	}
 	if (max_player) {
-		v = -100000;
+		v = -1000001;
 		while (i < moves->size) {
 			Move child = child_node->m;
 			List * next_moves = init_list();
@@ -125,7 +180,7 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 		}
 		return v;
 	} else {
-		v = 100000;
+		v = 1000001;
 		while (i < moves->size) {
 			Move child = child_node->m;
 			List * next_moves = init_list();

@@ -11,77 +11,6 @@ int main(int argc, char* argv[]) {
 	return 0;
 }
 
-int test(PtrConfig c, int num) {
-	Location src = create_loc(1, 4);
-	if (num == 1) {
-		List * moves = init_list();
-		Move move = { src, create_loc(3, 5) };
-		Move move_2 = { src, create_loc(2, 5) };
-		insert_move(moves, move);
-		insert_move(moves, move_2);
-		print_list(moves);
-		free_list(moves);
-	}
-	else if (num == 2) {//create moves for c2
-		List * moves = init_list();
-		generate_moves_loc(c, moves, src,1);
-		print_list(moves);
-		free_list(moves);
-	}
-	else if (num == 3) {
-		List * moves = init_list();
-		generate_moves(c, moves,1);
-		print_list(moves);
-		free_list(moves);
-	}
-	else if (num == 4) {
-		printf("reached line=%d\n", __LINE__);
-		List * moves = init_list();
-		BOARD(4,4)='b';
-		BOARD(1,4)=EMPTY;
-		print_board(c);
-		generate_moves(c, moves,1);
-		print_list(moves);
-		free_list(moves);
-	}else if (num == 5) {
-		printf("reached line=%d\n", __LINE__);
-		List * moves = init_list();
-		print_board(c);
-		generate_legal_moves(c, moves);
-		print_list(moves);
-		free_list(moves);
-	}else if (num == 6) {
-		printf("reached line=%d\n", __LINE__);
-		List * moves = init_list();
-		generate_legal_moves(c,moves);
-		c->DEPTH=4;
-		alphabeta(*c, moves);//config, move list,depth,alpha,beta,maximize player,score_turn
-		Move best=best_move(moves);
-		print_move(best);
-		//print_list(moves);
-		free_list(moves);
-	}else if (num == 7) {//checks get_best_move
-		printf("reached line=%d\n", __LINE__);
-		int depth=3;
-		BOARD(5,6)='m';
-		BOARD(1,5)=' ';
-		List * moves = init_list();
-		generate_legal_moves(c,moves);
-		get_best_moves(c,moves,depth);
-	}else if (num == 8) {//checks get_score
-		printf("reached line=%d\n", __LINE__);
-		//(Location src, Location dst, char type, int with_board, Config* c, int threat)
-		BOARD(5,6)='m';
-		BOARD(1,5)=' ';
-		Move move= create_move(create_loc(5,6),create_loc(6,7),'o',0,c,1);
-		int depth=3;
-		List * moves = init_list();
-		generate_legal_moves(c,moves);
-		get_score(c,depth,moves,move);
-	}
-	return 1;
-}
-
 //* --------------------- SETTINGS STATE FUNCTIONS --------------------- *//
 
 int settings_state(PtrConfig c) {
@@ -150,6 +79,8 @@ int settings_state(PtrConfig c) {
 			if (res == 1) {
 				print_message(NO_PIECE);
 			}
+		} else if (strcmp(input, "print\n") == 0) {
+			print_board(c);
 		} else if (strcmp(input, "quit\n") == 0) {
 			c->END_GAME = 1;
 			break;
@@ -169,23 +100,83 @@ int settings_state(PtrConfig c) {
 // switches turns after turn is made. if board is losing position, announces and quits game.
 int set_minimax_depth(char* p, Config* config) {
 	if (strcmp(p, " best\n") == 0) {
-		config->DIFFICULTY = 1;
+		config->BEST = 1;
 		config->DEPTH = 4;
 		return 1;
 	}
 	p = strchr(p, ' ');
 	int d = atoi(p);
 	if (1 <= d && d <= 4) {
-		config->DIFFICULTY = 0;
+		config->BEST = 0;
 		config->DEPTH = d;
 		return 1;
 	}
 	return 0;
 }
 
+int set_by_pos(PtrConfig c, Location set_loc, int color, char type) {
+	if (invalid_position(set_loc)) {
+		return 0;
+	}
+	if (type == BOARD(set_loc.row, set_loc.col)) { // piece already in place
+		return 2;
+	}
+	int cnt = count_pieces(c, type);
+	type = tolower(type);
+
+	if ((type == 'k' || type == 'q') && (cnt >= 1)) {
+		return 1;
+	} else if ((type == 'r' || type == 'n' || type == 'b') && (cnt >= 2)) {
+		return 1;
+	} else if (type == 'm' && (cnt >= 8)) {
+		return 1;
+	} else {
+		if (color == BLACK) {
+			type = (char) toupper((int) type);
+		}
+		BOARD(set_loc.row, set_loc.col)= type;
+		return 2;
+	}
+}
+
+int remove_by_pos(PtrConfig c, Location rm_loc) {
+	if (rm_loc.row < 0 || rm_loc.row > BOARD_SIZE - 1 || rm_loc.col < 0
+			|| rm_loc.col > BOARD_SIZE - 1) {
+		return 0;
+	}
+	BOARD(rm_loc.row, rm_loc.col)= EMPTY;
+	return 1;
+}
+
+int count_pieces(PtrConfig c, char type) {
+	int i, j;
+	int cnt = 0;
+	for (i = 0; i < BOARD_SIZE; i++) {
+		for (j = 0; j < BOARD_SIZE; j++) {
+			if (BOARD(i,j)== type) {
+				cnt++;
+			}
+		}
+	}
+	return cnt;
+}
+
+int ok_to_start(Config * c) {
+	if (!(count_pieces(c,'k')==1) && (count_pieces(c,'K')==1)){
+		return 0;
+	}int j;
+	for (j=0;j<BOARD_SIZE;j++){
+		if (BOARD(BOARD_SIZE-1,j)=='m'||BOARD(0,j)=='M'){
+			return 0;
+		}
+	}
+	return 1;
+}
+
 //* ----------------------- GAME STATE FUNCTIONS ----------------------- *//
 
 int game_state(PtrConfig c) {
+	print_board(c);
 	while (!c->END_GAME) {
 		List* moves = init_list();
 		if (moves == NULL) { // malloc failure...
@@ -224,73 +215,6 @@ int game_state(PtrConfig c) {
 }
 
 //* Checks whether one of the c->TURN's king is threatened by opponent *//
-
-int check(Config* c) {
-	Location king_location = piece_location(c, c->TURN == WHITE ? 'k' : 'K');
-	List* moves = init_list();
-	if (moves==NULL){
-		return 2;
-	}
-	c->TURN=!c->TURN;
-	if (!generate_moves(c, moves,0)){
-		return 2;
-	}
-	Node* curr = moves->first;
-	while (curr != NULL) {
-		if (compare_locations(king_location, curr->m.dst) && curr->m.threat) {
-			c->TURN=!c->TURN;
-			free_list(moves);
-			return 1;
-		}
-		curr = curr->next;
-	}
-	free_list(moves);
-	c->TURN=!c->TURN;
-	return 0;
-}
-
-int king_is_taken(PtrConfig c, Move move) {
-	Config new=create_new_config(c,c->TURN,move.board,0);
-	return check(&new);
-}
-
-int generate_legal_moves(PtrConfig c, List * moves) {
-	if(!generate_moves(c, moves,1)){
-		return 0;
-	}
-	PtrNode curr_node = moves->first;
-	while (curr_node != NULL) {
-		int taken= king_is_taken(c, curr_node->m);
-		if (taken==2){
-			free_list(moves);
-			return 0;
-		}if (taken==1){
-			pop_data(moves);
-			curr_node = moves->first;
-		}else{
-			break;
-		}
-
-	}
-	while (curr_node != NULL && curr_node->next != NULL) {
-		PtrNode next_node = curr_node->next;
-		int taken=king_is_taken(c, next_node->m);
-		if (taken==2){
-			free_list(moves);
-			return 0;
-		}
-		if (taken==1) {
-			curr_node->next = next_node->next;
-			free(next_node);
-			moves->size--;
-		}else{
-			curr_node = next_node;
-		}
-	}
-	return 1;
-}
-
-/** Reads user input, and performs specified operations on board. plays user_turn **/
 int user_turn(Config* c,List * moves) {
 	while (1) {
 		printf("%s player - enter your move:\n",
@@ -322,19 +246,24 @@ int user_turn(Config* c,List * moves) {
 		} else if (strncmp(input, "get_best_moves", 14) == 0) {
 			char* depth = strchr(input, ' ') + 1;
 			int d=(strncmp(depth, "best", 4) == 0)?4:atoi(depth);
+			int temp=c->BEST;
+			c->BEST=(strncmp(depth, "best", 4) == 0)?1:0;
 			if(!get_best_moves(c,moves,d)){
+				c->BEST=temp;
 				c->END_GAME = 1;//malloc error
 				break;
-			}
+			}c->BEST=temp;
 		} else if (strncmp(input, "get_score", 9) == 0) {
 			char* depth = strchr(input, ' ') + 1;
 			depth[1]='\0';
 			int d=(strncmp(depth, "best", 4) == 0)?4:atoi(depth);
+			int temp=c->BEST;
+			c->BEST=(strncmp(depth, "best", 4) == 0)?1:0;
 			depth[1]=' ';
 			Move move = parse_move(depth+2, c);
 			if(legal_move(c,moves,move,1)){
 				get_score(c,d,moves,move);
-			}
+			}c->BEST=temp;
 		} else if (strncmp(input, "save", 4) == 0) {
 			char* path = strchr(input, ' ') + 1;
 			if (!save_file(path, c)) {
@@ -351,7 +280,6 @@ int user_turn(Config* c,List * moves) {
 	return 1;
 }
 
-// Performs computer's best move calculated by "Minimax".
 int computer_turn(Config* c,List *moves) {
 	if (!alphabeta(*c, moves)) { // malloc error
 		c->END_GAME = 1;
@@ -363,6 +291,7 @@ int computer_turn(Config* c,List *moves) {
 	print_move(comp_move);
 	printf("\n");
 	free_list(moves);
+	print_board(c);
 	return 1;
 }
 
@@ -389,6 +318,35 @@ int player_wins(PtrConfig c){
 		return 2;//tie
 	}
 	return 0;//not a win and not a tie
+}
+
+int check(Config* c) {
+	Location king_location = piece_location(c, c->TURN == WHITE ? 'k' : 'K');
+	List* moves = init_list();
+	if (moves==NULL){
+		return 2;
+	}
+	c->TURN=!c->TURN;
+	if (!generate_moves(c, moves,0)){
+		return 2;
+	}
+	Node* curr = moves->first;
+	while (curr != NULL) {
+		if (compare_locations(king_location, curr->m.dst) && curr->m.threat) {
+			c->TURN=!c->TURN;
+			free_list(moves);
+			return 1;
+		}
+		curr = curr->next;
+	}
+	free_list(moves);
+	c->TURN=!c->TURN;
+	return 0;
+}
+
+int king_is_taken(PtrConfig c, Move move) {
+	Config new=create_new_config(c,c->TURN,move.board,0);
+	return check(&new);
 }
 
 //* ------------------------ LEGAL MOVES CHECKS ------------------------ *//
@@ -452,7 +410,7 @@ int generate_moves(Config* c, List* moves,int create_boards) {
 	for (i = 0; i < BOARD_SIZE; i++) {
 		for (j = 0; j < BOARD_SIZE; j++) {
 			if (is_piece_turn(BOARD(i, j), c->TURN)) {
-				if (!generate_moves_loc(c, moves, create_loc(i, j),create_boards)) { // generate_moves_loc returns 0 iff loc is empty! redundant.
+				if (!generate_moves_loc(c, moves, create_location(i, j),create_boards)) { // generate_moves_loc returns 0 iff loc is empty! redundant.
 					return 0;
 				}
 			}
@@ -497,6 +455,42 @@ int generate_moves_loc(Config* c, List* moves, Location loc, int create_boards) 
 			return 0;
 		}
 		break;
+	}
+	return 1;
+}
+
+int generate_legal_moves(PtrConfig c, List * moves) {
+	if(!generate_moves(c, moves,1)){
+		return 0;
+	}
+	PtrNode curr_node = moves->first;
+	while (curr_node != NULL) {
+		int taken= king_is_taken(c, curr_node->m);
+		if (taken==2){
+			free_list(moves);
+			return 0;
+		}if (taken==1){
+			pop_data(moves);
+			curr_node = moves->first;
+		}else{
+			break;
+		}
+
+	}
+	while (curr_node != NULL && curr_node->next != NULL) {
+		PtrNode next_node = curr_node->next;
+		int taken=king_is_taken(c, next_node->m);
+		if (taken==2){
+			free_list(moves);
+			return 0;
+		}
+		if (taken==1) {
+			curr_node->next = next_node->next;
+			free(next_node);
+			moves->size--;
+		}else{
+			curr_node = next_node;
+		}
 	}
 	return 1;
 }
@@ -554,7 +548,7 @@ int generate_rook_moves(Config* c, List* moves, Location loc,int create_boards) 
 			return 0;
 		}
 	}
-	dst = create_loc(loc.row - 1, loc.col);
+	dst = create_location(loc.row - 1, loc.col);
 	while (!invalid_position(dst) && BOARD(dst.row, dst.col)== EMPTY) {
 		if (!insert_move(moves, create_move(loc, dst, 'o',create_boards, c,1))) {
 			return 0;
@@ -567,7 +561,7 @@ int generate_rook_moves(Config* c, List* moves, Location loc,int create_boards) 
 			return 0;
 		}
 	}
-	dst = create_loc(loc.row, loc.col - 1);
+	dst = create_location(loc.row, loc.col - 1);
 	while (!invalid_position(dst) && BOARD(dst.row, dst.col)== EMPTY) {
 		if (!insert_move(moves, create_move(loc, dst, 'o', create_boards, c, 1))) {
 			return 0;
@@ -580,7 +574,7 @@ int generate_rook_moves(Config* c, List* moves, Location loc,int create_boards) 
 			return 0;
 		}
 	}
-	dst = create_loc(loc.row, loc.col + 1);
+	dst = create_location(loc.row, loc.col + 1);
 	while (!invalid_position(dst) && BOARD(dst.row, dst.col)== EMPTY) {
 		if (!insert_move(moves, create_move(loc, dst, 'o', create_boards, c, 1))) {
 			return 0;
@@ -612,7 +606,7 @@ int generate_bishop_moves(Config* c, List* moves, Location loc, int create_board
 			return 0;
 		}
 	}
-	dst = create_loc(loc.row + 1, loc.col - 1);
+	dst = create_location(loc.row + 1, loc.col - 1);
 	while (!invalid_position(dst) && BOARD(dst.row, dst.col)== EMPTY ) { // up-left
 		if (!insert_move(moves, create_move(loc, dst, 'o', create_boards, c, 1))) {
 			return 0;
@@ -626,7 +620,7 @@ int generate_bishop_moves(Config* c, List* moves, Location loc, int create_board
 			return 0;
 		}
 	}
-	dst = create_loc(loc.row - 1, loc.col + 1);
+	dst = create_location(loc.row - 1, loc.col + 1);
 	while (!invalid_position(dst) && BOARD(dst.row, dst.col)== EMPTY ) { // down-right
 		if (!insert_move(moves, create_move(loc, dst, 'o', create_boards, c,1))) {
 			return 0;
@@ -640,7 +634,7 @@ int generate_bishop_moves(Config* c, List* moves, Location loc, int create_board
 			return 0;
 		}
 	}
-	dst = create_loc(loc.row - 1, loc.col - 1);
+	dst = create_location(loc.row - 1, loc.col - 1);
 	while (!invalid_position(dst) && BOARD(dst.row, dst.col)== EMPTY ) { // down-left
 		if (!insert_move(moves, create_move(loc, dst, 'o', create_boards, c,1))) {
 			return 0;
@@ -662,7 +656,7 @@ int generate_knight_moves(Config* c, List* moves, Location loc, int create_board
 			-2, -1 }, { -1, 2 }, { -1, -2 } };
 	int i;
 	for (i = 0; i < 8; i++) {
-		Location dst = create_loc(loc.row + options[i][0],
+		Location dst = create_location(loc.row + options[i][0],
 				loc.col + options[i][1]);
 		if (!invalid_position(dst) && ((BOARD(dst.row, dst.col) == EMPTY)
 		|| (is_piece_not_turn(BOARD(dst.row, dst.col),c->TURN)))) {
@@ -684,7 +678,7 @@ int generate_king_moves(Config* c, List* moves, Location loc,int create_boards) 
 			{ -1, 0 }, { -1, 1 }, { 0, 1 } };
 	int i;
 	for (i = 0; i < 8; i++) {
-		Location dst = create_loc(loc.row + options[i][0],
+		Location dst = create_location(loc.row + options[i][0],
 				loc.col + options[i][1]);
 		if (!invalid_position(dst) && (BOARD(dst.row, dst.col)== EMPTY
 		||is_piece_not_turn(BOARD(dst.row, dst.col),c->TURN))) {
@@ -731,74 +725,16 @@ int make_move(PtrConfig c, List* poss_moves, Move move) {
 	return make_legal_move(c->board, move, c->TURN);
 }
 
-int set_by_pos(PtrConfig c, Location set_loc, int color, char type) {
-	if (invalid_position(set_loc)) {
-		return 0;
-	}
-	if (type == BOARD(set_loc.row, set_loc.col)) { // piece already in place
-		return 2;
-	}
-	int cnt = count_pieces(c, type);
-	type = tolower(type);
-
-	if ((type == 'k' || type == 'q') && (cnt >= 1)) {
-		return 1;
-	} else if ((type == 'r' || type == 'n' || type == 'b') && (cnt >= 2)) {
-		return 1;
-	} else if (type == 'm' && (cnt >= 8)) {
-		return 1;
-	} else {
-		if (color == BLACK) {
-			type = (char) toupper((int) type);
-		}
-		BOARD(set_loc.row, set_loc.col)= type;
-		return 2;
-	}
-}
-
-int remove_by_pos(PtrConfig c, Location rm_loc) {
-	if (rm_loc.row < 0 || rm_loc.row > BOARD_SIZE - 1 || rm_loc.col < 0
-			|| rm_loc.col > BOARD_SIZE - 1) {
-		return 0;
-	}
-	BOARD(rm_loc.row, rm_loc.col)= EMPTY;
-	return 1;
-}
-
-int count_pieces(PtrConfig c, char type) {
-	int i, j;
-	int cnt = 0;
-	for (i = 0; i < BOARD_SIZE; i++) {
-		for (j = 0; j < BOARD_SIZE; j++) {
-			if (BOARD(i,j)== type) {
-				cnt++;
-			}
-		}
-	}
-	return cnt;
-}
-
 Location piece_location(Config* c, char piece) { //need to define default location;
 	int i, j;
-	Location res=create_loc(-1,-1);
+	Location res=create_location(-1,-1);
 	for (i = 0; i < BOARD_SIZE; i++) {
 		for (j = 0; j < BOARD_SIZE; j++) {
 			if (BOARD(i,j)== piece) {
-				res=create_loc(i,j);
+				res=create_location(i,j);
 			}
 		}
 	}
 	return res;
 }
 
-int ok_to_start(Config * c){
-	if (!(count_pieces(c,'k')==1) && (count_pieces(c,'K')==1)){
-		return 0;
-	}int j;
-	for (j=0;j<BOARD_SIZE;j++){
-		if (BOARD(BOARD_SIZE-1,j)=='m'||BOARD(0,j)=='M'){
-			return 0;
-		}
-	}
-	return 1;
-}

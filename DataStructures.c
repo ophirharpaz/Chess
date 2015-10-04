@@ -1,6 +1,23 @@
 # include "DataStructures.h"
 # include "Minimax.h"
 
+/* --------------------- CONFIG STRUCTURE FUNCTIONS --------------------- */
+
+Config init_config(){
+	Config c={ 4 , 1 , WHITE , 0 , WHITE, 1};//need to change depth to 1 still...
+	init_board(&c);
+	return c;
+}
+
+Config create_new_config(PtrConfig c, int turn, char board[BOARD_SIZE][BOARD_SIZE], int depth){
+	Config new=init_config();
+	new.TURN=turn;
+	new.DEPTH=depth;
+	new.BEST=c->BEST;
+	copy_board(board,new.board);
+	return new;
+}
+
 void print_config(PtrConfig c){
 //	printf("score=%d\n",score(c,c->TURN));
 	printf("depth=%d\n",c->DEPTH);
@@ -8,77 +25,22 @@ void print_config(PtrConfig c){
 	printf("user_color=%d\n",c->USER_COLOR);
 	printf("end_game=%d\n",c->END_GAME);
 	printf("turn=%d\n",c->TURN);
-	printf("difficulty=%d\n",c->DIFFICULTY);
+	printf("est=%d\n",c->BEST);
 	print_board(c);
 }
 
-Location create_loc(int i, int j) {
-	Location loc = {i, j};
-	return loc;
-}
+/* --------------------- BOARD FUNCTIONS --------------------- */
 
-// Returns a specific location from a substring of move string entered by user
-Location parse_location(char* loc_str) {
-	Location loc;
-	char* brack1 = strchr(loc_str, '<') + 1;
-	loc.col = (int) brack1[0] - 97;
-	brack1 += 2;
-	char* brack2 = strchr(brack1, '>');
-	brack2[0] = '\0';
-	loc.row = atoi(brack1) - 1;
-	brack2[0] = '>';
-	return loc;
-}
-
-// Prints a struct Location in the required format
-int print_location(Location loc) {
-	if (loc.col == -2 && loc.row == -2) {
-		printf("Null Loc");
-	} else {
-		char c = (char) (loc.col + 97);
-		printf("<%c,%d>", c, loc.row + 1);
+void init_board(Config* c) {
+	char pieces[] ="rnbqkbnr";
+	int i, j;
+	for (j = 0; j < BOARD_SIZE; j++) {
+		BOARD(BOARD_SIZE-1,j) = toupper(BOARD(0,j) = pieces[j]);
+		BOARD(BOARD_SIZE-2,j) = toupper(BOARD(1,j) = 'm');
 	}
-	return 0;
-}
-
-int compare_locations(Location l1, Location l2) {
-	return (l1.col == l2.col) && (l1.row == l2.row);
-}
-
-// Prints struct Move as required
-int print_move(Move move) {
-	print_location(move.src);
-	printf(" to ");
-	print_location(move.dst);
-	printf(" ");
-	switch (move.type) {
-	case 'n':
-		printf("knight");
-		break;
-	case 'r':
-		printf("rook");
-		break;
-	case 'b':
-		printf("bishop");
-		break;
-	case 'q':
-		printf("queen");
-		break;
-	}
-//	printf(" %d\n",move.score);
-	return 0;
-}
-
-// Recursively prints content of all nodes in list
-void print_list(List* lst) {
-	rec_print_list(lst->first);
-}
-
-void rec_print_list(PtrNode head) {
-	if (head != NULL) {
-		print_move(head->m);
-		printf("\n");
-		rec_print_list(head->next);
+	for (i = 2; i < BOARD_SIZE-2; i++) {
+		for (j = 0; j < BOARD_SIZE; j++ )
+			BOARD(i, j) = EMPTY;
 	}
 }
 
@@ -109,20 +71,6 @@ void print_board(Config* c) {
 	printf("\n");
 }
 
-void init_board(Config* c) {
-	char pieces[] ="rnbqkbnr";
-	int i, j;
-	for (j = 0; j < BOARD_SIZE; j++) {
-		BOARD(BOARD_SIZE-1,j) = toupper(BOARD(0,j) = pieces[j]);
-		BOARD(BOARD_SIZE-2,j) = toupper(BOARD(1,j) = 'm');
-	}
-	for (i = 2; i < BOARD_SIZE-2; i++) {
-		for (j = 0; j < BOARD_SIZE; j++ )
-			BOARD(i, j) = EMPTY;
-	}
-}
-
-// Removes all pieces from board.
 int clear_board(Config* c) {
 	int i, j;
 	for (i = 0; i < BOARD_SIZE; i++) {
@@ -143,31 +91,51 @@ int copy_board(char board[BOARD_SIZE][BOARD_SIZE],char next_board[BOARD_SIZE][BO
 	return 1;
 }
 
-Config init_config(){
-	Config c={ 4 , 1 , WHITE , 0 , WHITE, 1};//need to change depth to 1 still...
-	init_board(&c);
-	return c;
+/* --------------------- LOCATION STRUCTURE FUNCTIONS --------------------- */
+
+Location create_location(int i, int j) {
+	Location loc = {i, j};
+	return loc;
 }
 
-Config create_new_config(PtrConfig c, int turn, char board[BOARD_SIZE][BOARD_SIZE], int depth){
-	Config new=init_config();
-	new.TURN=turn;
-	new.DEPTH=depth;
-	copy_board(board,new.board);
-	return new;
+Location parse_location(char* loc_str) {
+	Location loc;
+	char* brack1 = strchr(loc_str, '<') + 1;
+	loc.col = (int) brack1[0] - 97;
+	brack1 += 2;
+	char* brack2 = strchr(brack1, '>');
+	brack2[0] = '\0';
+	loc.row = atoi(brack1) - 1;
+	brack2[0] = '>';
+	return loc;
 }
 
-List* init_list() {
-	List* new = malloc(sizeof(List));
-	if (new == NULL) {
-		perror_message("malloc");
-		return NULL;
+int print_location(Location loc) {
+	if (loc.col == -2 && loc.row == -2) {
+		printf("Null Loc");
+	} else {
+		char c = (char) (loc.col + 97);
+		printf("<%c,%d>", c, loc.row + 1);
 	}
-	new->first = NULL;
-	new->size = 0;
-	return new;
+	return 0;
 }
 
+int get_location_moves(PtrConfig c,List * legal_moves, Location loc) {
+	Node * curr_node;
+	for(curr_node=legal_moves->first;curr_node!=NULL;curr_node=curr_node->next){
+		if(compare_locations(curr_node->m.src,loc)){
+			print_move(curr_node->m);
+			printf("\n");
+		}
+	}
+	return 1;
+}
+
+int compare_locations(Location l1, Location l2) {
+	return (l1.col == l2.col) && (l1.row == l2.row);
+}
+
+/* --------------------- MOVE STRUCTURE FUNCTIONS --------------------- */
 Move create_move(Location src, Location dst, char type, int with_board, Config* c, int threat) {
 	Move move = { src, dst, type, -1, threat };
 	if (with_board) {
@@ -176,16 +144,33 @@ Move create_move(Location src, Location dst, char type, int with_board, Config* 
 	return move;
 }
 
-int create_board_move(PtrConfig c,Move * move) {
-	copy_board(c->board,move->board);
-	make_legal_move(move->board, *move, c->TURN);
-	return 1;
+int print_move(Move move) {
+	print_location(move.src);
+	printf(" to ");
+	print_location(move.dst);
+	printf(" ");
+	switch (move.type) {
+	case 'n':
+		printf("knight");
+		break;
+	case 'r':
+		printf("rook");
+		break;
+	case 'b':
+		printf("bishop");
+		break;
+	case 'q':
+		printf("queen");
+		break;
+	}
+	//printf(" %d\n",move.score);
+	return 0;
 }
 
 int get_best_moves(PtrConfig c,List * legal_moves, int depth){
 	Config new=create_new_config(c, c->TURN, c->board, depth);
 	alphabeta(new,legal_moves);
-	int best=0;
+	int best=-1000001;
 	Node * curr_node;
 	for (curr_node=legal_moves->first;curr_node!=NULL;curr_node=curr_node->next){
 		best=max(best,curr_node->m.score);
@@ -198,32 +183,8 @@ int get_best_moves(PtrConfig c,List * legal_moves, int depth){
 	return 1;
 }
 
-int get_location_moves(PtrConfig c,List * legal_moves, Location loc){
-	Node * curr_node;
-	for(curr_node=legal_moves->first;curr_node!=NULL;curr_node=curr_node->next){
-		if(compare_loc(curr_node->m.src,loc)){
-			print_move(curr_node->m);
-			printf("\n");
-		}
-	}
-	return 1;
-}
-
-int get_score(PtrConfig c, int depth,List * legal_moves,Move move){
-	Config new=create_new_config(c, c->TURN, c->board, depth);
-	alphabeta(new,legal_moves);
-	Node * curr_node;
-	for (curr_node=legal_moves->first;curr_node!=NULL;curr_node=curr_node->next){
-		if(compare_move(curr_node->m,move)){
-			printf("%d",curr_node->m.score);
-			break;
-		}
-	}
-	return 1;
-}
-
 Move best_move(List* moves) {
-	int max_score = -10000;
+	int max_score = -1000001;
 	Move best_move;
 	int i = 0;
 	int best_num=0;
@@ -257,33 +218,19 @@ Move best_move(List* moves) {
 	return best_move;
 }
 
-int make_legal_move(char board[BOARD_SIZE][BOARD_SIZE], Move move, int turn) {
-	char piece = board[move.src.row][move.src.col];
-	board[move.src.row][move.src.col] = EMPTY;
-	if (move.type == 'o') {
-		board[move.dst.row][move.dst.col] = piece;
-	} else {
-		board[move.dst.row][move.dst.col] = turn == BLACK ? toupper(move.type) : move.type;
-	}
-	return 1;
+int compare_move(Move this, Move other) {
+	return (compare_locations(this.src,other.src)) && (compare_locations(this.dst,other.dst));
 }
 
-Node* create_node(Move d) {
-	Node* new = malloc(sizeof(Node));
-	if (new == NULL) {
-		perror_message("malloc");
-		return 0;
+int find_move(List * list, Move move) {
+	Node* head = list->first;
+	while (head!=NULL) {
+		if (compare_move(head->m, move)) {
+			return 1;
+		}
+		head = head->next;
 	}
-	new->m = d;
-	new->next = NULL;
-	return new;
-}
-
-void pop_data(List* list) {
-	PtrNode next=list->first->next;
-	free(list->first);
-	list->first = next;
-	list->size--;
+	return 0;
 }
 
 int insert_move(List* list, Move move) {
@@ -303,9 +250,58 @@ int insert_move(List* list, Move move) {
 	return 1;
 }
 
-int print_node(Node* node) {
-	print_move(node->m);
+int create_board_move(PtrConfig c, Move * move) {
+	copy_board(c->board,move->board);
+	make_legal_move(move->board, *move, c->TURN);
 	return 1;
+}
+
+int get_score(PtrConfig c, int depth,List * legal_moves,Move move){
+	Config new=create_new_config(c, c->TURN, c->board, depth);
+	alphabeta(new,legal_moves);
+	Node * curr_node;
+	for (curr_node=legal_moves->first;curr_node!=NULL;curr_node=curr_node->next){
+		if(compare_move(curr_node->m,move)){
+			printf("%d\n",curr_node->m.score);
+			break;
+		}
+	}
+	return 1;
+}
+
+int make_legal_move(char board[BOARD_SIZE][BOARD_SIZE], Move move, int turn) {
+	char piece = board[move.src.row][move.src.col];
+	board[move.src.row][move.src.col] = EMPTY;
+	if (move.type == 'o') {
+		board[move.dst.row][move.dst.col] = piece;
+	} else {
+		board[move.dst.row][move.dst.col] = turn == BLACK ? toupper(move.type) : move.type;
+	}
+	return 1;
+}
+
+/* --------------------- LIST STRUCTURE FUNCTIONS --------------------- */
+List* init_list() {
+	List* new = malloc(sizeof(List));
+	if (new == NULL) {
+		perror_message("malloc");
+		return NULL;
+	}
+	new->first = NULL;
+	new->size = 0;
+	return new;
+}
+
+void print_list_rec(PtrNode head) {
+	if (head != NULL) {
+		print_move(head->m);
+		printf("\n");
+		print_list_rec(head->next);
+	}
+}
+
+void print_list(List* lst) {
+	print_list_rec(lst->first);
 }
 
 int free_list(List* list) {
@@ -316,21 +312,26 @@ int free_list(List* list) {
 	return 1;
 }
 
-int find_move(List * list, Move move) {
-	Node* head = list->first;
-	while (head!=NULL) {
-		if (compare_move(head->m, move)) {
-			return 1;
-		}
-		head = head->next;
+Node* create_node(Move d) {
+	Node* new = malloc(sizeof(Node));
+	if (new == NULL) {
+		perror_message("malloc");
+		return 0;
 	}
-	return 0;
+	new->m = d;
+	new->next = NULL;
+	return new;
 }
 
-int compare_move(Move this, Move other) {
-	return (compare_loc(this.src,other.src)) && (compare_loc(this.dst,other.dst));
+int print_node(Node* node) {
+	print_move(node->m);
+	return 1;
 }
 
-int compare_loc(Location this, Location other) {
-	return this.col == other.col && this.row == other.row;
+void pop_data(List* list) {
+	PtrNode next=list->first->next;
+	free(list->first);
+	list->first = next;
+	list->size--;
 }
+

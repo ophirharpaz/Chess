@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<game>
+	<next_turn>White</next_turn>
+	<game_mode>2</game_mode>
+	<difficulty>3</difficulty>
+	<user_color>Black</user_color>
+	<board>
+		<row_8>__r_____</row_8>
+		<row_7>________</row_7>
+		<row_6>___M____</row_6>
+		<row_5>___Knk__</row_5>
+		<row_4>R_______</row_4>
+		<row_3>__q__m__</row_3>
+		<row_2>____Q___</row_2>
+		<row_1>________</row_1>
+	</board>
+</game>

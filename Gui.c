@@ -2,6 +2,7 @@
 
 /** GUI Flow **/
 int main_gui(Config c) {
+
 	SDL_Event event;
 
 	/* Initialize the SDL library (starts the event loop) */
@@ -32,6 +33,7 @@ int main_gui(Config c) {
 				exit(0);
 				return 0;
 			}
+			print_list(PC_moves);
 			Move comp_move = best_move(PC_moves);
 			int src_index, dst_index;
 			src_index = loc_to_index(comp_move.src);
@@ -194,7 +196,7 @@ int draw_button(SDL_Surface* mainWindow, button b) {
 int draw_main_window(window * w, PtrConfig c) {
 	//initalize c
 	c->DEPTH = 1;
-	c->DIFFICULTY = 0;
+	c->BEST = 0;
 	c->MODE = 1;
 	c->TURN = 1;
 	c->USER_COLOR = 1;
@@ -368,11 +370,11 @@ int draw_settings_window(window* w, Config* c) {
 					create_image("graphics/3Pressed.png") :
 					create_image("graphics/3.png");
 	image diff4Image =
-			(c->DEPTH == 4 && c->DIFFICULTY == 0) ?
+			(c->DEPTH == 4 && c->BEST == 0) ?
 					create_image("graphics/4Pressed.png") :
 					create_image("graphics/4.png");
 	image diffBestImage =
-			(c->DIFFICULTY) ?
+			(c->BEST) ?
 					create_image("graphics/BestPressed.png") :
 					create_image("graphics/Best.png");
 
@@ -506,7 +508,7 @@ int create_board_panel(panel* board_panel, SDL_Rect board_rect, Config * c) {
 	int i, j;
 	for (i = 0; i < BOARD_SIZE; i++) {
 		for (j = 0; j < BOARD_SIZE; j++) {
-			Location loc = create_loc(i, j);
+			Location loc = create_location(i, j);
 			board_children[i * (BOARD_SIZE) + j] = custom_button(loc,
 					BOARD(i, j), 0, board_rect);
 		}
@@ -783,7 +785,7 @@ int onClick_main_window(int event, window* w, Config* c) {
 	}
 	}
 	if (8 <= event && event <= (8 + SLOTS_NUM - 1)) {
-		char path[18] = "SavedGames/x.txt\n";
+		char path[18] = "SavedGames/x.xml\n";
 		path[11] = '0' + event - 8;
 		load_file(path, c);
 //		print_config(c);
@@ -842,7 +844,7 @@ int onClick_player_selection_window(int event, window* w, Config* c) {
 int onClick_settings_window(int event, window* w, Config* c) {
 	switch (event) {
 	case DIFF_1: {
-		c->DIFFICULTY = 0;
+		c->BEST = 0;
 		c->DEPTH = 1;
 		char paths[5][30] = { "graphics/1Pressed.png", "graphics/2.png",
 				"graphics/3.png", "graphics/4.png", "graphics/Best.png" };
@@ -850,7 +852,7 @@ int onClick_settings_window(int event, window* w, Config* c) {
 		break;
 	}
 	case DIFF_2: {
-		c->DIFFICULTY = 0;
+		c->BEST = 0;
 		c->DEPTH = 2;
 		char paths[5][30] = { "graphics/1.png", "graphics/2Pressed.png",
 				"graphics/3.png", "graphics/4.png", "graphics/Best.png" };
@@ -858,7 +860,7 @@ int onClick_settings_window(int event, window* w, Config* c) {
 		break;
 	}
 	case DIFF_3: {
-		c->DIFFICULTY = 0;
+		c->BEST = 0;
 		c->DEPTH = 3;
 		char paths[5][30] = { "graphics/1.png", "graphics/2.png",
 				"graphics/3Pressed.png", "graphics/4.png", "graphics/Best.png" };
@@ -866,7 +868,7 @@ int onClick_settings_window(int event, window* w, Config* c) {
 		break;
 	}
 	case DIFF_4: {
-		c->DIFFICULTY = 0;
+		c->BEST = 0;
 		c->DEPTH = 4;
 		char paths[5][30] = { "graphics/1.png", "graphics/2.png",
 				"graphics/3.png", "graphics/4Pressed.png", "graphics/Best.png" };
@@ -874,7 +876,7 @@ int onClick_settings_window(int event, window* w, Config* c) {
 		break;
 	}
 	case DIFF_BEST: {
-		c->DIFFICULTY = 1;
+		c->BEST = 1;
 		c->DEPTH = 4;
 		char paths[5][30] = { "graphics/1.png", "graphics/2.png",
 				"graphics/3.png", "graphics/4.png", "graphics/BestPressed.png" };
@@ -969,7 +971,7 @@ int onClick_set_board_window(int event, window* w, Config* c) {
 		int index = event - 3;
 		int col = index % BOARD_SIZE;
 		int row = (index - col) / BOARD_SIZE;
-		Location loc = create_loc(row, col);
+		Location loc = create_location(row, col);
 		if (add_to_board == 't' && b.image.pathToImage[17] == 's') {
 			if (remove_by_pos(c, loc)) {
 				button new_b = w->children[0].children[index];
@@ -1003,8 +1005,8 @@ int onClick_game_window(int event, window* w, Config* c) {
 		int src_index = -1;
 		int marked_index = -1;
 		Location dst_loc = index_to_loc(dst_index);
-		Location src_loc = create_loc(-1, -1);
-		Location marked_loc = create_loc(-1, -1);
+		Location src_loc = create_location(-1, -1);
+		Location marked_loc = create_location(-1, -1);
 		int i;
 		button b;
 		for (i = 0; i < MAX_BUTTONS; i++) {
@@ -1040,7 +1042,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 				free_list(moves);
 				return 0;
 			}
-			Move move = create_move(src_loc, dst_loc, 'o', 0, c, 0); //need to fix?
+			Move move = create_move(src_loc, dst_loc, 'o', 0, c, 0);
 
 			char piece = BOARD(src_loc.row, src_loc.col);
 			int sign = islower(piece) ? 1 : -1;
@@ -1074,18 +1076,18 @@ int onClick_game_window(int event, window* w, Config* c) {
 	panel p;
 	switch (event) {
 	case 68: // Get Move
-		if (c->MODE == TWO_PLAYERS) {
-			if (curr_panel(w->children[2]) == 'p'){ // promote is showing
-				return 0;
-			}if (c->END_GAME==1){
-				return 0;
-			}
-
+		if (curr_panel(w->children[2]) == 'p'){ // promote is showing
+			return 0;
+		} if (c->END_GAME==1){
+			return 0;
+		} if (c->MODE == TWO_PLAYERS) {
 			draw_depths_panel(&p, create_rect(600, 137, 200, 309), c);
 			free_panel(w->children[2]);
 			w->children[2] = p;
 			draw_panel(w->main_window, w->children[1]);
 			draw_panel(w->main_window, w->children[2]);
+		} else {
+			display_best_move(c, w, p, 71 + c->DEPTH);
 		}
 		break;
 	case 69: // Save Game
@@ -1110,12 +1112,12 @@ int onClick_game_window(int event, window* w, Config* c) {
 		char pieces[4] = {'q', 'n', 'b', 'r'};
 		char piece = (c->TURN == BLACK)? pieces[event-72] : toupper(pieces[event-72]);
 		char searched_man = (c->TURN == BLACK)? 'm' : 'M';
-		Location man_loc = create_loc(-1, -1);
+		Location man_loc = create_location(-1, -1);
 		int i;
 		int row = (c->TURN == WHITE)? 0 : BOARD_SIZE - 1;
 		for (i = 0; i < BOARD_SIZE; i++) {
 			if (BOARD(row, i) == searched_man) {
-				man_loc = create_loc(row, i);
+				man_loc = create_location(row, i);
 				break;
 			}
 		}
@@ -1134,7 +1136,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 		draw_curr_state(w, c);
 	}
 	if (72 <= event && event <= (72 + SLOTS_NUM - 1) && (curr_panel(w->children[2]) == 's')) { // saved games panel showing
-		char path[18] = "SavedGames/x.txt\n";
+		char path[18] = "SavedGames/x.xml\n";
 		path[11] = '0' + event - 72;
 		save_file(path, c);
 		draw_empty_panel(&p, create_rect(600, 137, 200, 309), c);
@@ -1143,78 +1145,86 @@ int onClick_game_window(int event, window* w, Config* c) {
 		draw_panel(w->main_window, w->children[1]);
 		draw_panel(w->main_window, w->children[2]);
 	} else if (72 <= event && event <= 76 && (curr_panel(w->children[2]) == 'd')) { // depth panel showing
-		int first_marked_index = -1;
-		int second_marked_index = -1;
-		int piece_selected_index = -1;
-		int i;
-		button b;
-		for (i = 0; i < MAX_BUTTONS; i++) {
-			b = w->children[0].children[i];
-			if (b.image.pathToImage[17] == 's') {
-				if (b.image.pathToImage[16] == 's') {
-					second_marked_index = first_marked_index != -1 ? i : -1;
-					first_marked_index =
-							first_marked_index != -1 ? first_marked_index : i;
-				} else {
-					piece_selected_index = i;
-				}
+		if (event == 76) {
+			event--;
+		}
+		display_best_move(c, w, p, event);
+	}
+	return 1;
+}
+
+/** Show best move on the board **/
+int display_best_move(Config* c, window* w, panel p, int event) {
+	int first_marked_index = -1;
+	int second_marked_index = -1;
+	int piece_selected_index = -1;
+	int i;
+	button b;
+	for (i = 0; i < MAX_BUTTONS; i++) {
+		b = w->children[0].children[i];
+		if (b.image.pathToImage[17] == 's') {
+			if (b.image.pathToImage[16] == 's') {
+				second_marked_index = first_marked_index != -1 ? i : -1;
+				first_marked_index =
+						first_marked_index != -1 ? first_marked_index : i;
+			} else {
+				piece_selected_index = i;
 			}
 		}
-		if (first_marked_index != -1) {
-			Location loc1 = index_to_loc(first_marked_index);
-			update_square(w, c, loc1, BOARD(loc1.row, loc1.col),
-					w->children[0].children[first_marked_index]);
-		}
-		if (second_marked_index != -1) {
-			Location loc2 = index_to_loc(second_marked_index);
-			update_square(w, c, loc2, BOARD(loc2.row, loc2.col),
-					w->children[0].children[second_marked_index]);
-		}
-		if (piece_selected_index != -1) {
-			change_piece_marking(index_to_loc(piece_selected_index), c,
-					BOARD_RECT, w, piece_selected_index, 0);
-		}
-
-		int depth = event - 71;
-		List* moves = init_list();
-		if (moves == NULL) { // malloc failure...
-			return 0;
-		}
-		if (!generate_legal_moves(c, moves)) { // malloc failure...
-			free_list(moves);
-			return 0;
-		}
-
-		get_best_moves(c, moves, depth);
-		Move move = best_move(moves);
-		// Disappearing of get_move buttons
-		draw_empty_panel(&p, create_rect(600, 137, 200, 309), c);
-		free_panel(w->children[2]);
-		w->children[2] = p;
-		draw_panel(w->main_window, w->children[1]);
-		draw_panel(w->main_window, w->children[2]);
-		// Showing best_move on the board
-		int src_index = loc_to_index(move.src);
-		int dst_index = loc_to_index(move.dst);
-		image opaque = create_image("graphics/pieces/ss.png");
-		button src_opaque, dst_opaque;
-		create_button(&src_opaque, BOARD_RECT,
-				28 + move.src.col * SQUARE_SIZE,
-				28 + (7 - move.src.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
-				opaque);
-		create_button(&dst_opaque, BOARD_RECT,
-				28 + move.dst.col * SQUARE_SIZE,
-				28 + (7 - move.dst.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
-				opaque);
-		free_button(w->children[0].children[src_index]);
-		w->children[0].children[src_index] = src_opaque;
-		free_button(w->children[0].children[dst_index]);
-		w->children[0].children[dst_index] = dst_opaque;
-		draw_button(w->main_window, w->children[0].children[src_index]);
-		draw_button(w->main_window, w->children[0].children[dst_index]);
-		free_list(moves);
+	}
+	if (first_marked_index != -1) {
+		Location loc1 = index_to_loc(first_marked_index);
+		update_square(w, c, loc1, BOARD(loc1.row, loc1.col),
+				w->children[0].children[first_marked_index]);
+	}
+	if (second_marked_index != -1) {
+		Location loc2 = index_to_loc(second_marked_index);
+		update_square(w, c, loc2, BOARD(loc2.row, loc2.col),
+				w->children[0].children[second_marked_index]);
+	}
+	if (piece_selected_index != -1) {
+		change_piece_marking(index_to_loc(piece_selected_index), c,
+				BOARD_RECT, w, piece_selected_index, 0);
 	}
 
+	int depth = event - 71;
+	List* moves = init_list();
+	if (moves == NULL) { // malloc failure...
+		return 0;
+	}
+	if (!generate_legal_moves(c, moves)) { // malloc failure...
+		free_list(moves);
+		return 0;
+	}
+	get_best_moves(c, moves, depth);
+	Move move = best_move(moves);
+	// Disappearing of get_move buttons
+	draw_empty_panel(&p, create_rect(600, 137, 200, 309), c);
+	free_panel(w->children[2]);
+	w->children[2] = p;
+	draw_panel(w->main_window, w->children[1]);
+	draw_panel(w->main_window, w->children[2]);
+	// Showing best_move on the board
+	int src_index = loc_to_index(move.src);
+	int dst_index = loc_to_index(move.dst);
+	image opaque = create_image("graphics/pieces/ss.png");
+	button src_opaque, dst_opaque;
+	create_button(&src_opaque, BOARD_RECT,
+			28 + move.src.col * SQUARE_SIZE,
+			28 + (7 - move.src.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
+			opaque);
+	create_button(&dst_opaque, BOARD_RECT,
+			28 + move.dst.col * SQUARE_SIZE,
+			28 + (7 - move.dst.row) * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE,
+			opaque);
+	free_button(w->children[0].children[src_index]);
+	w->children[0].children[src_index] = src_opaque;
+	free_button(w->children[0].children[dst_index]);
+	w->children[0].children[dst_index] = dst_opaque;
+	draw_button(w->main_window, w->children[0].children[src_index]);
+	draw_button(w->main_window, w->children[0].children[dst_index]);
+	free_list(moves);
+	printf("finished display best move\n");
 	return 1;
 }
 
@@ -1256,7 +1266,7 @@ int update_square(window* w,Config* c, Location loc, char piece, button b) {
 Location index_to_loc(int index) {
 	int col = index % BOARD_SIZE;
 	int row = (index - col) / BOARD_SIZE;
-	return create_loc(row, col);
+	return create_location(row, col);
 }
 
 int loc_to_index(Location loc) {
@@ -1278,7 +1288,7 @@ int draw_move_made(window* w, Config * c, int src_index, int dst_index,
 	draw_button(w->main_window, w->children[0].children[dst_index]);
 
 	//create_new location with piece button
-	button b1 = custom_button(create_loc(dst.row, dst.col),
+	button b1 = custom_button(create_location(dst.row, dst.col),
 			BOARD(dst.row, dst.col), 0, rect);
 	free_button(w->children[0].children[dst_index]);
 	w->children[0].children[dst_index] = b1;

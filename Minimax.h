@@ -5,6 +5,8 @@
 
 
 int score(PtrConfig c,int turn);
+int best_piece_score(char piece, int turn);
+int best_score(PtrConfig c,int turn);
 int piece_score(char piece, int turn);
 int rec_alphabeta(Config c, List* moves, int depth,int alpha, int beta, int max_player, int score_turn, int* board_num);
 int alphabeta(Config c, List* moves);

@@ -1,5 +1,6 @@
 # include "FileWriter.h"
 
+/* --------------------- FILE LOADING --------------------- */
 char* next_line(char* p) {
 	return strchr(p, '\n') + 1;
 }
@@ -51,17 +52,17 @@ int load_file(char* path, PtrConfig c) {
 	char *line6 = next_line(line5);
 	if (c->MODE == 2) {
 		if (compare_line_field(line5, "best") == 0) {
-			c->DIFFICULTY = 1;
+			c->BEST = 1;
 			c->DEPTH = 4;
 		} else {
-			c->DIFFICULTY = 0;
+			c->BEST = 0;
 			char *depth = strchr(line5, '>') + 1;
 			c->DEPTH = atoi(depth);
 		}
 		c->USER_COLOR =
 				(compare_line_field(line6, "White") == 0) ? WHITE : BLACK;
 	} else {
-		c->DIFFICULTY = 0;
+		c->BEST = 0;
 		c->DEPTH = 1;
 		c->USER_COLOR = 0;
 	}
@@ -79,6 +80,7 @@ int load_file(char* path, PtrConfig c) {
 	return 1;
 }
 
+/* --------------------- FILE SAVING --------------------- */
 int write_line(FILE* fp, char* field, char* content, int depth) {
 	int i;
 	for (i = 0; i < depth; i++) {
@@ -135,7 +137,7 @@ int save_file(char* path, PtrConfig c) {
 		return 0;
 	if (c->MODE == 2) {
 		res[0] = c->DEPTH + '0';
-		if (!write_line(fp, "difficulty", c->DIFFICULTY == 1 ? "best" : res,
+		if (!write_line(fp, "difficulty", c->BEST == 1 ? "best" : res,
 				1)) {
 			return 0;
 		}

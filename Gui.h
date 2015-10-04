@@ -9,7 +9,8 @@
 #define GUI_H_
 
 # include "SDL/SDL.h"
-# include "SDL/SDL_image.h"
+//# include "SDL/SDL_image.h"
+# include </usr/local/lib/SDL_image-1.2.12/include/SDL/SDL_image.h>
 # include "Flow.h"
 
 #define MAX_BUTTONS 64
@@ -133,6 +134,7 @@ int onClick_set_board_window(int event, window* w, Config* c);
 int find_panel(SDL_Event mouseMotion,window w);
 int find_button(SDL_Event mouseMotion,panel p,int j);
 char curr_panel(panel p);
+int display_best_move(Config* c, window* w, panel p, int event);
 
 /* Toggle functions */
 int toggle_buttons(window* w, int panel, char* path1, char* path2, int child_index);
