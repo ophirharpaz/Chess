@@ -1,6 +1,7 @@
 # include "Gui.h"
 
-/** GUI Flow **/
+/** Main function of gui mode;
+ *  This is the main-event loop of the program when run in gui mode. **/
 int main_gui(Config c) {
 
 	SDL_Event event;
@@ -17,22 +18,27 @@ int main_gui(Config c) {
 	draw_main_window(&w, &c);
 	SDL_Event mouseMotion;
 	while (SDL_WaitEvent(&event) >= 0) {
+		//computer turn..
 		if(w.id=='g'&&c.MODE==ONE_PLAYER && c.TURN!=c.USER_COLOR && c.END_GAME==0){
 			List * PC_moves=init_list();
 			if (PC_moves==NULL){
+				free_window(w);
 				exit(0);
 				return 0;
 			}
 			if (!generate_legal_moves(&c, PC_moves)) { // malloc failure...
 				free_list(PC_moves);
+				free_window(w);
 				exit(0);
 				return 0;
 			}
 			if (!alphabeta(c, PC_moves)) { // malloc error
 				c.END_GAME = 1;
 				exit(0);
+				free_window(w);
 				return 0;
 			}
+			// Computer turn (independent of events)
 			print_list(PC_moves);
 			Move comp_move = best_move(PC_moves);
 			int src_index, dst_index;
@@ -45,11 +51,13 @@ int main_gui(Config c) {
 			draw_curr_state(&w, &c);
 			free_list(PC_moves);
 		}
+		// Recognize mouse-button-down event and determine number of the pressed button.
 		switch (event.type) {
 		case SDL_MOUSEBUTTONDOWN: {
 			Uint8 *keys;
 			keys = SDL_GetKeyState(NULL);
 			if (keys[SDLK_ESCAPE] == SDL_PRESSED) {
+				free_window(w);
 				exit(0);
 			} else {
 				int pressed_button = find_panel(mouseMotion, w);
@@ -57,12 +65,14 @@ int main_gui(Config c) {
 			}
 		}
 		break;
+		// Follow all mouse motion events
 		case SDL_MOUSEMOTION: {
 			mouseMotion = event;
 
 			break;
 		}
 		case SDL_QUIT: {
+			free_window(w);
 			exit(0);
 		}
 			break;
@@ -72,7 +82,10 @@ int main_gui(Config c) {
 	exit(1);
 }
 
-/** GUI widgets creators **/
+/** GUI widgets creators:
+ *  All functions below generate a widget to be used in the program.
+ *  Each of the creators receives the necessary structure fields **/
+
 SDL_Rect create_rect(int x, int y, int width, int height) {
 	SDL_Rect rect = { x, y, width, height };
 	return rect;
@@ -92,6 +105,9 @@ int create_button(button* b, SDL_Rect parent_rect, int x_pos, int y_pos,
 	return 1;
 }
 
+/** Expects: a new pathToImage.
+ *  Changes the image of button b (used when background needs to be changed etc.);
+ *  Returns: 0 in case of error, 1 otherwise **/
 int edit_button(button* b, char* pathToImage) {
 	b->image = create_image(pathToImage);
 	SDL_FreeSurface(b->button_window);
@@ -151,7 +167,10 @@ int create_window(window* w, int children_len, char header[20],
 	return 1;
 }
 
-/** widget-drawing functions **/
+/** GUI widgets drawers:
+ *  All functions below draw a widget on the screen.
+ *  Each of the functions receives the widget, and its parent if needed **/
+
 int draw_window(window w) {
 
 	SDL_WM_SetCaption(w.header, 0); // NULL can be some icon in the future
@@ -162,7 +181,7 @@ int draw_window(window w) {
 	SDL_Surface* bg_temp = SDL_LoadBMP(w.bgImage.pathToImage);
 	SDL_BlitSurface(bg_temp, NULL, w.main_window, NULL);
 	SDL_Flip(w.main_window);
-
+	SDL_FreeSurface(bg_temp);
 	// Draw panels
 	panel child;
 	int i = 0;
@@ -192,7 +211,10 @@ int draw_button(SDL_Surface* mainWindow, button b) {
 	return 1;
 }
 
-/** Program's windows drawing functions **/
+/** Window-drawing functions:
+ *  All functions below draw some window of the program (main, settings, player selection etc.).
+ *  Each of the functions  initializes all widgets (images, buttons, panels) and sets all children lists as required. **/
+
 int draw_main_window(window * w, PtrConfig c) {
 	//initalize c
 	c->DEPTH = 1;
@@ -202,7 +224,6 @@ int draw_main_window(window * w, PtrConfig c) {
 	c->USER_COLOR = 1;
 	c->END_GAME = 0;
 	init_board(c);
-//	print_config(c);
 	//initialize variables
 	button panel_children[MAX_BUTTONS];
 	button panel_children_title[MAX_BUTTONS];
@@ -452,6 +473,9 @@ int draw_set_board_window(window* w, Config* c) {
 	return draw_window(*w);
 }
 
+/** Expects: menu panel, menu rectangle and a configuration pointer c.
+ *  Creates the panel containing all pieces to be placed on the board in the Set-The-Board phase.
+ *  Assigns menu_panel to the created panel, and returns 1. **/
 int create_set_board_menu(panel* menu_panel, SDL_Rect menu_rect, Config * c) {
 	button menu_children[MAX_BUTTONS];
 	char pieces[6] = { 'm', 'n', 'b', 'r', 'q', 'k' };
@@ -501,6 +525,9 @@ int create_set_board_menu(panel* menu_panel, SDL_Rect menu_rect, Config * c) {
 	return 1;
 }
 
+/** Expects: board panel, board rectangle and a configuration pointer c.
+ *  Creates the board panel for both Set-The-Board and Game window.
+ *  Assigns board_panel to the created panel, and returns 1. **/
 int create_board_panel(panel* board_panel, SDL_Rect board_rect, Config * c) {
 	button board_children[MAX_BUTTONS];
 	image bg_image = create_image("graphics/Board.png");
@@ -519,6 +546,9 @@ int create_board_panel(panel* board_panel, SDL_Rect board_rect, Config * c) {
 	return 1;
 }
 
+/** Expects: window w a configuration pointer c.
+ *  Draws the complete game window (including the board and the side-menu).
+ *  Returns the result of draw_curr_state(w, c)**/
 int draw_game_window(window* w, Config* c) {
 	free_window(*w);
 
@@ -546,6 +576,9 @@ int draw_game_window(window* w, Config* c) {
 	return draw_curr_state(w, c);
 }
 
+/** Expects: menu panel, menu rectangle and a pointer to configuration c.
+ *  Creates the side-menu in game window.
+ *  Assigns menu_panel to the created menu and returns 1 **/
 int create_game_menu(panel* menu_panel, SDL_Rect menu_rect, Config* c) {
 	button menu_children[MAX_BUTTONS];
 
@@ -582,7 +615,10 @@ int create_game_menu(panel* menu_panel, SDL_Rect menu_rect, Config* c) {
 	return 1;
 }
 
-int draw_empty_panel(panel* toBeFilled, SDL_Rect slots_rect, Config* c) {
+/** Expects: a declared panel toBeFilled, some rectangle and a pointer to configuration c.
+ *  Draws an empty panel for cases in which panels should be re-drawn on an empty surface.
+ *  Returns 1. **/
+int draw_empty_panel(panel* toBeFilled, SDL_Rect rect, Config* c) {
 	button toBeFilled_children[MAX_BUTTONS];
 	image bg_image = create_image("graphics/transparent.png");
 	create_panel(ZERO_RECT, toBeFilled, 0, 0, 0, 0, 0, bg_image,
@@ -590,6 +626,9 @@ int draw_empty_panel(panel* toBeFilled, SDL_Rect slots_rect, Config* c) {
 	return 1;
 }
 
+/** Expects: slots panel, slots rectangle and a pointer to configuration c.
+ *  Creates the slots panel for both "Load Game" and "Save Game" options.
+ *  Assigns slots_panel the created panel and returns 1. **/
 int create_slots_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 	button slots_children[MAX_BUTTONS];
 
@@ -621,7 +660,10 @@ int create_slots_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 	return 1;
 }
 
-int draw_depths_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
+/** Expects: depths panel, depths rectangle and a pointer to configuration c.
+ *  Creates the depths panel for "Get Move" option in game window.
+ *  Assigns depths_panel the created panel and returns 1. **/
+int draw_depths_panel(panel* depths_panel, SDL_Rect depths_rect, Config* c) {
 	button depths_children[MAX_BUTTONS];
 	// initialize buttons
 	int i;
@@ -630,7 +672,7 @@ int draw_depths_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 		button b;
 		path[14] = '0' + (i + 1);
 		image button_image = create_image(path);
-		create_button(&b, slots_rect, 32 + (54 + 3 * SPACE) * (i % 2),
+		create_button(&b, depths_rect, 32 + (54 + 3 * SPACE) * (i % 2),
 				((i - (i % 2)) / 2) * (54 + SPACE) + 9 * SPACE, 54, 54,
 				button_image);
 		depths_children[i] = b;
@@ -638,23 +680,26 @@ int draw_depths_panel(panel* slots_panel, SDL_Rect slots_rect, Config* c) {
 	button b;
 	path[14] = 'b';
 	image button_image = create_image(path);
-	create_button(&b, slots_rect, 73, 2 * (54 + SPACE) + 9 * SPACE, 54, 54,
+	create_button(&b, depths_rect, 73, 2 * (54 + SPACE) + 9 * SPACE, 54, 54,
 			button_image);
 	depths_children[4] = b;
 
 	image depth_image = create_image("graphics/Depth.png");
 	button depth;
-	create_button(&depth, slots_rect, 40, 22, 150, 38, depth_image);
+	create_button(&depth, depths_rect, 40, 22, 150, 38, depth_image);
 	depths_children[5] = depth;
 
 	image DepthsPanelBG = create_image("graphics/transparent.png");
 
-	create_panel(ZERO_RECT, slots_panel, 6, 600, 137, 198, 310, DepthsPanelBG,
+	create_panel(ZERO_RECT, depths_panel, 6, 600, 137, 198, 310, DepthsPanelBG,
 			depths_children);
 	return 1;
 }
 
-int draw_promote_panel(panel* promote_panel, SDL_Rect slots_rect, Config* c) {
+/** Expects: promote panel, some rectangle and a pointer to configuration c.
+ *  Creates the promote panel for when a pawn reaches the last row.
+ *  Assigns promote_panel the created panel and returns 1. **/
+int draw_promote_panel(panel* promote_panel, SDL_Rect rect, Config* c) {
 	button promote_children[MAX_BUTTONS];
 	// initialize buttons
 	char pieces[4] = { 'q', 'n', 'b', 'r' };
@@ -664,7 +709,7 @@ int draw_promote_panel(panel* promote_panel, SDL_Rect slots_rect, Config* c) {
 		button b;
 		path[16] = (c->TURN == BLACK) ? toupper(pieces[i]) : pieces[i];
 		image button_image = create_image(path);
-		create_button(&b, slots_rect, 20 + (SQUARE_SIZE + 3 * SPACE) * (i % 2),
+		create_button(&b, rect, 20 + (SQUARE_SIZE + 3 * SPACE) * (i % 2),
 				((i - (i % 2)) / 2) * (SQUARE_SIZE + SPACE) + 9 * SPACE,
 				SQUARE_SIZE, SQUARE_SIZE, button_image);
 		promote_children[i] = b;
@@ -675,6 +720,9 @@ int draw_promote_panel(panel* promote_panel, SDL_Rect slots_rect, Config* c) {
 	return 1;
 }
 
+/** Expects: window w, configuration pointer c, a game-state and some rectangle.
+ *  Draws "Check", "Mate" or "Tie" on the side menu according to state.
+ *  Returns 1. **/
 int draw_state(window* w, Config *c, int state, SDL_Rect rect) {
 	panel p;
 	button p_children[MAX_BUTTONS];
@@ -701,6 +749,9 @@ int draw_state(window* w, Config *c, int state, SDL_Rect rect) {
 	return 1;
 }
 
+/** Expects: window w, configuration pointer c.
+ *  Identifies the game-state and draws the correct banner on the side menu, using draw_state function from above.
+ *  Returns 1. **/
 int draw_curr_state(window* w, Config *c) {
 	SDL_Rect menu_rect = create_rect(600, 0, 200, 600);
 	List* opponent_moves = init_list();
@@ -734,8 +785,8 @@ int draw_curr_state(window* w, Config *c) {
 	case 1: //check
 		if (opponent_moves->size == 0) { //no moves
 			draw_state(w, c, 0, menu_rect);
-			printf("Mate! %s player wins!\n",
-					c->TURN == BLACK ? "white" : "black");
+			printf("Mate! %s player wins the game\n",
+					c->TURN == BLACK ? "White" : "Black");
 			c->END_GAME = 1;
 		} else { //display check
 			draw_state(w, c, 2, menu_rect);
@@ -749,6 +800,13 @@ int draw_curr_state(window* w, Config *c) {
 }
 
 /** OnClick functions **/
+/** All the function below deal with OnClick events.
+ * onClick recognizes the current window and then calls the corresponding OnClick functions, unique for the specific window.
+ * Each specific OnClick functions switches cases between pressed buttons - and responds according to the button pressed.
+ * Macros are used as cases (instead of integers) to make code more readable. **/
+
+/** Expects: Location loc, piece, button_selected integer and a rectangle.
+ *  Returns a button with the correct image regarding the argument 'piece', and whether the button is selected or not. */
 button custom_button(Location loc, char piece, int button_selected,
 		SDL_Rect p_rect) {
 	char button_path[23];
@@ -788,10 +846,8 @@ int onClick_main_window(int event, window* w, Config* c) {
 		char path[18] = "SavedGames/x.xml\n";
 		path[11] = '0' + event - 8;
 		load_file(path, c);
-//		print_config(c);
 		draw_player_selection_window(w, c);
 	}
-
 	return 0;
 }
 
@@ -1046,8 +1102,8 @@ int onClick_game_window(int event, window* w, Config* c) {
 
 			char piece = BOARD(src_loc.row, src_loc.col);
 			int sign = islower(piece) ? 1 : -1;
-			int promote = ((islower(piece) && src_loc.row + sign == 7)
-					|| (isupper(piece) && src_loc.row + sign == 0));
+			int promote = ((islower(piece) && (src_loc.row + sign == 7)&&BOARD(src_loc.row,src_loc.col)=='m')
+					|| (isupper(piece) && (src_loc.row + sign == 0) && BOARD(src_loc.row,src_loc.col)=='M'));
 
 			if (make_move(c, moves, move)) { // make move
 				if (promote) { // Show promote panel
@@ -1065,6 +1121,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 				draw_curr_state(w, c);
 			}
 
+			free_list(moves);
 		} else if (src_index == -1) { // no piece is marked right now
 									  // the user is choosing a piece to make a move with
 			if (is_piece_turn(BOARD(dst_loc.row, dst_loc.col), c->TURN)) {
@@ -1091,7 +1148,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 		}
 		break;
 	case 69: // Save Game
-		if (curr_panel(w->children[2]) == 'p'){ // promote is showing
+		if (curr_panel(w->children[2]) == 'p'){ // Promote panel showing
 			return 0;
 		}
 		create_slots_panel(&p, create_rect(600, 150, 200, 310), c);
@@ -1131,11 +1188,11 @@ int onClick_game_window(int event, window* w, Config* c) {
 		draw_empty_panel(&empty, create_rect(600, 137, 200, 309), c);
 		free_panel(w->children[2]);
 		w->children[2] = empty;
-		draw_panel(w->main_window, w->children[1]); // Behind empty
-		draw_panel(w->main_window, w->children[2]); // empty
+		draw_panel(w->main_window, w->children[1]); // Draw the panel behind the empty panel
+		draw_panel(w->main_window, w->children[2]); // Draw the empty panel
 		draw_curr_state(w, c);
 	}
-	if (72 <= event && event <= (72 + SLOTS_NUM - 1) && (curr_panel(w->children[2]) == 's')) { // saved games panel showing
+	if (72 <= event && event <= (72 + SLOTS_NUM - 1) && (curr_panel(w->children[2]) == 's')) { // Save Game panel showing
 		char path[18] = "SavedGames/x.xml\n";
 		path[11] = '0' + event - 72;
 		save_file(path, c);
@@ -1144,7 +1201,7 @@ int onClick_game_window(int event, window* w, Config* c) {
 		w->children[2] = p;
 		draw_panel(w->main_window, w->children[1]);
 		draw_panel(w->main_window, w->children[2]);
-	} else if (72 <= event && event <= 76 && (curr_panel(w->children[2]) == 'd')) { // depth panel showing
+	} else if (72 <= event && event <= 76 && (curr_panel(w->children[2]) == 'd')) { // Get Move panel showing
 		if (event == 76) {
 			event--;
 		}
@@ -1153,7 +1210,9 @@ int onClick_game_window(int event, window* w, Config* c) {
 	return 1;
 }
 
-/** Show best move on the board **/
+/** Expects: Pointer to configuration c, window w, panel p and event.
+ *  Displays the best move for the current player.
+ *  Returns 0 in case of error and 1 otherwise. */
 int display_best_move(Config* c, window* w, panel p, int event) {
 	int first_marked_index = -1;
 	int second_marked_index = -1;
@@ -1224,7 +1283,6 @@ int display_best_move(Config* c, window* w, panel p, int event) {
 	draw_button(w->main_window, w->children[0].children[src_index]);
 	draw_button(w->main_window, w->children[0].children[dst_index]);
 	free_list(moves);
-	printf("finished display best move\n");
 	return 1;
 }
 
@@ -1249,6 +1307,8 @@ int onClick(int event, window *w, Config* c) {
 	return 0;
 }
 
+/** Expects: window w, pointer to configuration c, location, piece and button.
+ *  Re-draws button b according to 'piece' argument. **/
 int update_square(window* w,Config* c, Location loc, char piece, button b) {
 	char path[23];
 	strcpy(path, b.image.pathToImage);
@@ -1263,6 +1323,7 @@ int update_square(window* w,Config* c, Location loc, char piece, button b) {
 	return draw_button(w->main_window, w->children[0].children[index]);
 }
 
+/** index_to_loc and loc_to_index convert an index from 0-64 (a place on the board) to location structure, and vice-versa. **/
 Location index_to_loc(int index) {
 	int col = index % BOARD_SIZE;
 	int row = (index - col) / BOARD_SIZE;
@@ -1273,12 +1334,15 @@ int loc_to_index(Location loc) {
 	return BOARD_SIZE * loc.row + loc.col;
 }
 
+/** Expects: Window w, pointer to configuration c, source and destination indices and locations, button and rectangle.
+ *  Performs and draws the move generated by combining source and destination together.
+ *  Returns 0. */
 int draw_move_made(window* w, Config * c, int src_index, int dst_index,
 		Location src, Location dst, button* b, SDL_Rect rect) {
 	char new_path[23];
 	strcpy(new_path, b->image.pathToImage);
-	new_path[16] = (src.row + src.col) % 2 == 0 ? 'd' : 'l';
-	new_path[17] = 'u';
+	new_path[16] = (src.row + src.col) % 2 == 0 ? 'd' : 'l'; // dark or light square
+	new_path[17] = 'u'; // unselected
 	edit_button(&(w->children[0].children[src_index]), new_path);
 	new_path[16] = (dst.row + dst.col) % 2 == 0 ? 'd' : 'l';
 	edit_button(&(w->children[0].children[dst_index]), new_path);
@@ -1296,6 +1360,9 @@ int draw_move_made(window* w, Config * c, int src_index, int dst_index,
 	return 0;
 }
 
+/** Expects: destination location, pointer to configuration c, rectangle, window w, int index, int mark.
+ *  Toggles the marking of a square between selected or unselected.
+ *  Returns 1. */
 int change_piece_marking(Location dst_loc, Config * c, SDL_Rect rect,
 		window * w, int index, int mark) {
 	button b1 = custom_button(dst_loc, BOARD(dst_loc.row, dst_loc.col), mark,
@@ -1307,6 +1374,8 @@ int change_piece_marking(Location dst_loc, Config * c, SDL_Rect rect,
 
 }
 
+/** Expects: window w, old and new buttons, index, location and a new image path.
+ *  Removes the button of a piece from the board and replaces it with an empty-square image. **/
 int remove_piece(window * w, button * new_b, button * b, int index,
 		Location loc, char new_path[23]) {
 	strcpy(new_path, b->image.pathToImage);
@@ -1317,6 +1386,9 @@ int remove_piece(window * w, button * new_b, button * b, int index,
 	return draw_button(w->main_window, w->children[0].children[index]);
 }
 
+/** Expects: window w, the sequential number of the panel, two paths and a child index.
+ *  Toggles between different buttons, so that when one is selected - all others are not.
+ *  Returns 1. */
 int toggle_buttons(window* w, int panel, char* path1, char* path2,
 		int child_index) {
 	button left_button = w->children[panel].children[child_index];
@@ -1332,6 +1404,7 @@ int toggle_buttons(window* w, int panel, char* path1, char* path2,
 	return 1;
 }
 
+/** Toggles the difficulty buttons in the AI-Settings window **/
 int toggle_diffs(window* w, char paths[5][30], int child_index) {
 	int j = 0;
 	while (j < 5) {
@@ -1344,6 +1417,7 @@ int toggle_diffs(window* w, char paths[5][30], int child_index) {
 	return 1;
 }
 
+/** The following 5 functions identify the button pressed, and the panel in which the pressed button resides. **/
 int panel_pressed(SDL_Event mouseMotion, panel p) {
 	return (p.rect.x <= mouseMotion.motion.x)
 			&& (mouseMotion.motion.x <= p.rect.x + p.rect.w)
@@ -1395,18 +1469,6 @@ char curr_panel(panel p) {
 	if (p.children_len == 0) return 'r';
 	if (tolower(p.children[0].image.pathToImage[16]) == 'q') return 'p';
 	return tolower(p.children[0].image.pathToImage[9]); // First char of imagePath is a unique identifier of its parent panel p;
-}
-
-/* This function may run in a separate event thread */
-int FilterEvents(const SDL_Event *event) {
-
-	/* This quit event signals the closing of the window */
-	if (event->type == SDL_MOUSEMOTION) {
-//		printf("Mouse moved to (%d,%d)\n", event->motion.x,
-//				event->motion.y);
-		return (0); /* Drop it, we've handled it */
-	}
-	return (1);
 }
 
 /** Free Functions **/

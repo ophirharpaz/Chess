@@ -15,10 +15,8 @@
 #define BLACK 0
 #define TWO_PLAYERS 1
 #define ONE_PLAYER 2
-
 #define PATH_MAX 100
 
-// board initialization
 #define ENTER_SETTINGS "Enter game settings:\n" 
 #define WRONG_GAME_MODE "Wrong game mode\n"
 #define TWO_PLAYERS_GAME_MODE "Running game in 2 players mode\n"
@@ -26,6 +24,7 @@
 #define WRONG_MINIMAX_DEPTH "Wrong value for minimax depth. The value should be between 1 to 4\n"
 #define WRONG_FILE_NAME "Wrong file name\n"
 #define WRONG_POSITION "Invalid position on the board\n"
+#define INVALID_SETTING "Setting this piece creates an invalid board\n"
 #define NO_PIECE "The specified position does not contain your piece\n"
 #define WRONG_BOARD_INITIALIZATION "Wrong board initialization\n"
 

@@ -9,12 +9,14 @@
 #define GUI_H_
 
 # include "SDL/SDL.h"
-//# include "SDL/SDL_image.h"
-# include </usr/local/lib/SDL_image-1.2.12/include/SDL/SDL_image.h>
+# include "SDL/SDL_image.h"
+//# include </usr/local/lib/SDL_image-1.2.12/include/SDL/SDL_image.h>
 # include "Flow.h"
 
+//this macro defines number of save slots to display
+#define SLOTS_NUM 7
+
 #define MAX_BUTTONS 64
-#define SLOTS_NUM 10
 #define BUTTON_W 182
 #define BUTTON_H 54
 #define ZERO_RECT create_rect(0, 0, 0, 0)
@@ -43,7 +45,7 @@
 #define PLAY_S_CASE 12
 #define CANCEL_BS_CASE 80 // need to think of name
 
-/* Structures and Factories */
+/* --------------------- WIDGETS STRUCTURES --------------------- */
 
 typedef struct label {
 	int x_pos;
@@ -79,12 +81,9 @@ typedef struct window {
 	char id;
 } window;
 
-/* Declarations */
-//control create_button(char* text, int pos_x, int pos_y);
-int FilterEvents(const SDL_Event *event);
 int main_gui(Config c);
 
-/** Constructors for GUI controls **/
+/* --------------------- WIDGETS CONSTRUCTORS --------------------- */
 int create_button(button * b,SDL_Rect parent_rect, int x_pos, int y_pos, int width, int height, image image);
 label create_label(int x_pos, int y_pos, char text[100]);
 image create_image(char pathToImage[100]);
@@ -94,14 +93,14 @@ SDL_Rect create_rect(int x, int y, int width, int height);
 int edit_button(button* b, char* pathToImage);
 button custom_button(Location loc, char piece, int button_selected,SDL_Rect p_rect);
 
-/** Drawing functions for all GUI controls **/
+/* --------------------- WIDGETS-DRAWING FUNCTIONS --------------------- */
 int draw_window(window window);
 int draw_panel(SDL_Surface* mainWindow,panel p);
 int draw_label(label label, int parent_x, int parent_y);
 int draw_image(image image, int parent_x, int parent_y);
 int draw_button(SDL_Surface* mainWindow,button b);
 
-
+/* --------------------- WINDOW-DRAWING FUNCTIONS --------------------- */
 int draw_main_window(window * w,PtrConfig c);
 int draw_player_selection_window(window* w, Config* c);
 int draw_settings_window(window* w, Config* c);
@@ -123,7 +122,7 @@ int update_square(window* w,Config* c, Location loc, char piece, button b);
 int loc_to_index(Location loc);
 Location index_to_loc(int index);
 
-/* On-Click functions */
+/* --------------------- ON-CLICK FUNCTIONS --------------------- */
 int onClick(int event, window *w, Config* c);
 int onClick_main_window(int event, window* w, Config* c);
 int onClick_player_selection_window(int event, window* w, Config* c);
@@ -136,11 +135,11 @@ int find_button(SDL_Event mouseMotion,panel p,int j);
 char curr_panel(panel p);
 int display_best_move(Config* c, window* w, panel p, int event);
 
-/* Toggle functions */
+/* --------------------- TOGGLE FUNCTIONS --------------------- */
 int toggle_buttons(window* w, int panel, char* path1, char* path2, int child_index);
 int toggle_diffs(window* w, char paths[5][30], int child_index);
 
-/* Free functions */
+/* --------------------- FREE FUNCTIONS --------------------- */
 int free_window(window w);
 int free_panel(panel p);
 int free_button(button b);

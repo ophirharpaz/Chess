@@ -1,10 +1,18 @@
 # include "FileWriter.h"
 
 /* --------------------- FILE LOADING --------------------- */
+
+
+/** Expects: pointer to char (string)
+ *  returns a pointer to the next line **/
+
 char* next_line(char* p) {
 	return strchr(p, '\n') + 1;
 }
 
+/** Expects: pointer to char (string) and const pointer to char (string)
+ * compares the two strings- start of p the next appearence of ">" with text
+ *  returns result of comparison **/
 int compare_line_field(char* p, const char* text) {
 	p = strchr(p, '>') + 1;
 	int n = strlen(text);
@@ -15,6 +23,9 @@ int compare_line_field(char* p, const char* text) {
 	return res;
 }
 
+/** Expects: pointer to configuration, pointer to char (string), and number of row.
+ * loads the string to the row of board in configuration.
+ *  returns void **/
 void load_line(PtrConfig c, char* p, int row) {
 	p += 9;
 	int j;
@@ -23,6 +34,10 @@ void load_line(PtrConfig c, char* p, int row) {
 	}
 }
 
+
+/** Expects: pointer to configuration, pointer to char (relative or absolute path string)
+ * opens the file in the path, and loads it to configuration c
+ *  returns 0 in case of failure, 1 otherwise**/
 int load_file(char* path, PtrConfig c) {
 	char resolved_path[PATH_MAX];
 	path[strlen(path) - 1] = '\0';
@@ -81,6 +96,10 @@ int load_file(char* path, PtrConfig c) {
 }
 
 /* --------------------- FILE SAVING --------------------- */
+
+/** Expects: pointer to file, pointer to char (field string), pointer to char (content string), int depth
+ * writes line with field inx ml style, with depth number of padding tabs
+ *  returns 0 in case of failure, 1 otherwise**/
 int write_line(FILE* fp, char* field, char* content, int depth) {
 	int i;
 	for (i = 0; i < depth; i++) {
@@ -108,6 +127,9 @@ int write_line(FILE* fp, char* field, char* content, int depth) {
 	return 1;
 }
 
+/** Expects: pointer to configuration, pointer to char (relative or absolute path string)
+ * saves the configuration to file path as instructed
+ *  *  returns 0 in case of failure, 1 otherwise**/
 int save_file(char* path, PtrConfig c) {
 	char resolved_path[PATH_MAX];
 	realpath(path, resolved_path);

@@ -1,6 +1,9 @@
 # include "DataStructures.h"
 # include "Minimax.h"
 
+/** The functions in the source file deal mainly with data structures capabilities (insertion, deletion, initialization, printing etc.).
+ *  We decided to skip the documentation of most of the functions. We did document the less-trivial ones. */
+
 /* --------------------- CONFIG STRUCTURE FUNCTIONS --------------------- */
 
 Config init_config(){
@@ -46,7 +49,7 @@ void init_board(Config* c) {
 
 void print_line() {
 	int i;
-	printf("  |");
+	printf(" |");
 	for (i = 1; i < BOARD_SIZE * 4; i++) {
 		printf("-");
 	}
@@ -57,14 +60,14 @@ void print_board(Config* c) {
 	int i, j;
 	print_line();
 	for (j = BOARD_SIZE - 1; j >= 0; j--) {
-		printf((j < 9 ? " %d" : "%d"), j + 1);
+		printf((j < 9 ? "%d" : "%d"), j + 1);
 		for (i = 0; i < BOARD_SIZE; i++) {
 				printf("| %c ", BOARD(j, i));
 			}
 		printf("|\n");
 		print_line();
 	}
-	printf("   ");
+	printf("  ");
 	for (j = 0; j < BOARD_SIZE; j++) {
 		printf(" %c  ", (char) ('a' + j));
 	}
@@ -148,25 +151,27 @@ int print_move(Move move) {
 	print_location(move.src);
 	printf(" to ");
 	print_location(move.dst);
-	printf(" ");
 	switch (move.type) {
 	case 'n':
-		printf("knight");
+		printf(" knight");
 		break;
 	case 'r':
-		printf("rook");
+		printf(" rook");
 		break;
 	case 'b':
-		printf("bishop");
+		printf(" bishop");
 		break;
 	case 'q':
-		printf("queen");
+		printf(" queen");
 		break;
 	}
-	//printf(" %d\n",move.score);
 	return 0;
 }
 
+/** Expects: pointer to list of legal moves
+ *  generates scores to moves using alphabeta
+ *  with the given depth argument. prints all best_moves.
+ *  Returns: best move selected **/
 int get_best_moves(PtrConfig c,List * legal_moves, int depth){
 	Config new=create_new_config(c, c->TURN, c->board, depth);
 	alphabeta(new,legal_moves);
@@ -183,6 +188,11 @@ int get_best_moves(PtrConfig c,List * legal_moves, int depth){
 	return 1;
 }
 
+
+/** Expects: pointer to list of legal moves with score
+ *  from the best moves (with highest score) in the list,
+ *  selects one randomly.
+ *  Returns: best move selected **/
 Move best_move(List* moves) {
 	int max_score = -1000001;
 	Move best_move;
@@ -201,7 +211,6 @@ Move best_move(List* moves) {
 		i++;
 	}
 	srand(time(NULL));
-
 	int num= (rand()%(best_num))+1;
 	i=0;
 	head = moves->first;

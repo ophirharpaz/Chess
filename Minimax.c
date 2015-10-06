@@ -1,6 +1,12 @@
 # include "Minimax.h"
 # include "Flow.h"
 
+
+/** Expects: pointer to configuration and int turn
+ *  calculates the score of the configuration,
+ *  relative to argument turn, using best_piece_score.
+ *  Returns: score of configuration (int). **/
+
 int best_score(PtrConfig c, int turn) {
 	int wins = player_wins(c);
 	if (wins == -1) { //malloc failure
@@ -24,6 +30,11 @@ int best_score(PtrConfig c, int turn) {
 	return score;
 }
 
+
+/** Expects: char piece and int turn
+ *  returns score of piece according to best scoring function
+ *  Returns: score of piece (int). **/
+
 int best_piece_score(char piece, int turn) {
 	if (piece == EMPTY) {
 		return 0;
@@ -31,12 +42,8 @@ int best_piece_score(char piece, int turn) {
 	int p = islower(piece) > 0 ? WHITE : BLACK;
 	int sign = ((p == turn) ? 1 : -1);
 	piece = tolower(piece);
-	int pawn = 100;
-	int knight = 320;
-	int bishop = 325;
-	int rook = 500;
-	int queen = 975;
-	int king = 32767;
+	int pawn = 100;	int knight = 320;	int bishop = 325;
+	int rook = 500;	int queen = 975;	int king = 32767;
 	switch (piece) {
 	case 'm':
 		return pawn * sign;
@@ -54,6 +61,11 @@ int best_piece_score(char piece, int turn) {
 	return 0;
 }
 
+
+/** Expects: pointer to configuration and int turn
+ *  calculates the score of the configuration,
+ *  relative to argument turn, using piece_score.
+ *  Returns: score of configuration (int). **/
 int score(PtrConfig c, int turn) {
 	int wins = player_wins(c);
 	if (wins == -1) { //malloc failure
@@ -77,6 +89,9 @@ int score(PtrConfig c, int turn) {
 	return score;
 }
 
+/** Expects: char piece and int turn
+ *  returns score of piece according to scoring function
+ *  Returns: score of piece (int). **/
 int piece_score(char piece, int turn) {
 	if (piece == EMPTY) {
 		return 0;
@@ -107,6 +122,10 @@ int piece_score(char piece, int turn) {
 	return 0;
 }
 
+/** Expects: pointer to configuration and list of legal moves.
+ *  determines score of moves in list, according to configuration paramaters.
+ *  records number of calls to alphabeta in variable board_num
+ *  Returns: 0 in case of failure, 1 otherwise. **/
 int alphabeta(Config c, List* moves) {
 	int board_num = moves->size;
 	if (rec_alphabeta(c, moves, c.DEPTH, -100000, 100000, 1, c.TURN, &board_num)
@@ -118,10 +137,17 @@ int alphabeta(Config c, List* moves) {
 
 }
 
+
+/** Expects: pointer to configuration, list of legal moves, original depth, alpha and beta parameters
+ *  for pruning,max/min player,score_turn,number of calls to alphabeta.
+ *  performs the alphabeta algorithm recursively on all moves (nodes) in list moves.
+ *  Returns: 20000 in case of failure, score of move otherwise. **/
 int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 		int max_player, int score_turn, int* board_num) {
 	(*board_num)++;
-	if (depth != c.DEPTH) {
+
+	if (depth != c.DEPTH) { //if it is not the first level of the alphabeta algorithm
+		//calculate list of legal moves for configuration only if it is not the first level of the alphabeta.
 		if (!generate_legal_moves(&c, moves)) {
 			free_list(moves); //malloc failure
 			return 20000;
@@ -131,11 +157,12 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 	int i = 0;
 	Node* child_node = moves->first;
 	if (c.DEPTH == 0 || moves->size == 0) { // node is a terminal node
-		if (c.DEPTH != depth) {
-			free_list(moves);
-		}
+
 		if (moves->size == 0) {
 			c.TURN = 1 - c.TURN;
+		}
+		if (c.DEPTH != depth) {
+			free_list(moves);
 		}
 		int s = c.BEST ? best_score(&c, score_turn):score(&c, score_turn);
 		if (s == 20000) { //malloc failure
@@ -143,7 +170,7 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 		}
 		return s;
 	}
-	if (max_player) {
+	if (max_player) {//maximizing player
 		v = -1000001;
 		while (i < moves->size) {
 			Move child = child_node->m;
@@ -168,6 +195,7 @@ int rec_alphabeta(Config c, List* moves, int depth, int alpha, int beta,
 			if (beta < alpha) {
 				break;
 			}
+			// pruning starts only in second level of the alphabeta tree
 			if ((beta == alpha) && (c.DEPTH < depth - 1)) {
 				break;
 			}
